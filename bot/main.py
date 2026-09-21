@@ -43,20 +43,46 @@ class MLBBBot(commands.Bot):
             logger.info("extensao carregada", extra={"extension": extension})
 
         if settings.discord_guild_id:
-            # Sync por guild propaga na hora; o global pode levar ate 1 hora.
-            guild = discord.Object(id=settings.discord_guild_id)
-            self.tree.copy_global_to(guild=guild)
-            synced = await self.tree.sync(guild=guild)
-            logger.info(
-                "comandos sincronizados na guild",
-                extra={"guild_id": settings.discord_guild_id, "commands": len(synced)},
-            )
+            await self._sync_guild(settings.discord_guild_id)
         else:
             synced = await self.tree.sync()
             logger.warning(
                 "DISCORD_GUILD_ID nao definido: sync global pode levar ate 1h",
                 extra={"commands": len(synced)},
             )
+
+    async def _sync_guild(self, guild_id: int) -> None:
+        """Registra os comandos na guild configurada.
+
+        Sync por guild propaga na hora; o global pode levar ate 1 hora. Se o
+        bot nao estiver na guild, o Discord responde 403/404 - caso comum
+        quando o `.env` aponta para um servidor ao qual o bot ainda nao foi
+        convidado. Em vez de derrubar o processo, explicamos o que fazer e
+        caimos para o sync global.
+        """
+        guild = discord.Object(id=guild_id)
+        try:
+            self.tree.copy_global_to(guild=guild)
+            synced = await self.tree.sync(guild=guild)
+        except discord.HTTPException as exc:
+            logger.error(
+                "nao foi possivel registrar os comandos na guild: o bot provavelmente "
+                "nao foi adicionado a esse servidor. Convide-o pela URL de OAuth2 da "
+                "aplicacao (scopes bot + applications.commands) ou corrija "
+                "DISCORD_GUILD_ID no .env",
+                extra={"guild_id": guild_id, "status": exc.status},
+            )
+            synced = await self.tree.sync()
+            logger.warning(
+                "usando sync global como alternativa: pode levar ate 1h para aparecer",
+                extra={"commands": len(synced)},
+            )
+            return
+
+        logger.info(
+            "comandos sincronizados na guild",
+            extra={"guild_id": guild_id, "commands": len(synced)},
+        )
 
     async def on_ready(self) -> None:
         logger.info(
