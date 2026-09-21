@@ -26,7 +26,13 @@ class MLBBBot(commands.Bot):
     """
 
     def __init__(self) -> None:
-        super().__init__(command_prefix="!", intents=discord.Intents.default())
+        # `when_mentioned` em vez de um prefixo de texto: sem isso a
+        # discord.py avisa a cada boot que falta o intent de message content,
+        # que um bot so de slash commands nao usa.
+        super().__init__(
+            command_prefix=commands.when_mentioned,
+            intents=discord.Intents.default(),
+        )
         self.api = MLBBApiClient()
 
     async def setup_hook(self) -> None:
