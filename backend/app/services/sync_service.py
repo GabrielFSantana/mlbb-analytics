@@ -1,0 +1,170 @@
+"""Sincronizacao: provider -> banco.
+
+Este e o unico ponto da aplicacao que escreve dados vindos de uma fonte
+externa. O job periodico da Fase 2 chamara exatamente este servico.
+
+A escrita e idempotente: uma leitura ja gravada (mesmo heroi, patch, ranque e
+`collected_at`) e ignorada, entao rodar a sincronizacao duas vezes nao
+duplica historico.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from sqlalchemy.orm import Session
+
+from app.core.exceptions import ProviderNotSupportedError
+from app.core.logging import get_logger
+from app.models.enums import RankFilter
+from app.models.hero_stats import HeroStats
+from app.models.meta_snapshot import MetaSnapshot
+from app.providers.base import MLBBDataProvider
+from app.providers.factory import get_provider
+from app.repositories.hero_repository import HeroRepository
+from app.repositories.meta_repository import MetaRepository
+from app.repositories.patch_repository import PatchRepository
+from app.repositories.stats_repository import HeroStatsRepository
+
+logger = get_logger(__name__)
+
+
+@dataclass(slots=True)
+class SyncResult:
+    """Resumo do que a sincronizacao gravou."""
+
+    provider: str
+    heroes: int = 0
+    stats: int = 0
+    meta_snapshots: int = 0
+    patches: int = 0
+    skipped: int = 0
+    warnings: list[str] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "provider": self.provider,
+            "heroes": self.heroes,
+            "stats": self.stats,
+            "meta_snapshots": self.meta_snapshots,
+            "patches": self.patches,
+            "skipped": self.skipped,
+            "warnings": self.warnings,
+        }
+
+
+class SyncService:
+    def __init__(self, db: Session, provider: MLBBDataProvider | None = None) -> None:
+        self.db = db
+        self.provider = provider or get_provider()
+        self.heroes = HeroRepository(db)
+        self.stats = HeroStatsRepository(db)
+        self.meta = MetaRepository(db)
+        self.patches = PatchRepository(db)
+
+    def sync_all(self, *, rank_filter: RankFilter = RankFilter.ALL) -> SyncResult:
+        """Importa catalogo, patches, estatisticas e meta em uma transacao."""
+        result = SyncResult(provider=self.provider.name)
+
+        self._sync_heroes(result)
+        self.db.flush()  # garante ids dos herois novos antes dos FKs abaixo
+
+        self._sync_patches(result)
+        index = self.heroes.slug_index()
+        self._sync_stats(result, index, rank_filter)
+        self._sync_meta(result, index)
+
+        self.db.commit()
+        logger.info("sincronizacao concluida", extra=result.as_dict())
+        return result
+
+    # -- etapas ---------------------------------------------------------
+
+    def _sync_heroes(self, result: SyncResult) -> None:
+        for hero_data in self.provider.get_heroes():
+            self.heroes.upsert(
+                name=hero_data.name,
+                slug=hero_data.slug,
+                role=hero_data.role,
+                image_url=hero_data.image_url,
+            )
+            result.heroes += 1
+
+    def _sync_patches(self, result: SyncResult) -> None:
+        try:
+            patches = self.provider.get_patches()
+        except ProviderNotSupportedError:
+            result.warnings.append(f"{self.provider.name} nao fornece patches")
+            return
+        for patch_data in patches:
+            self.patches.upsert(
+                version=patch_data.version,
+                released_at=patch_data.released_at,
+                notes_url=patch_data.notes_url,
+                summary=patch_data.summary,
+                is_current=patch_data.is_current,
+            )
+            result.patches += 1
+
+    def _sync_stats(
+        self,
+        result: SyncResult,
+        index: dict[str, object],
+        rank_filter: RankFilter,
+    ) -> None:
+        for reading in self.provider.get_hero_stats(rank_filter=rank_filter):
+            hero = index.get(reading.hero_slug)
+            if hero is None:
+                result.warnings.append(f"stats de heroi desconhecido: {reading.hero_slug}")
+                continue
+            hero_id = hero.id  # type: ignore[attr-defined]
+            if self.stats.exists(
+                hero_id=hero_id,
+                patch=reading.patch,
+                rank_filter=reading.rank_filter,
+                collected_at=reading.collected_at,
+            ):
+                result.skipped += 1
+                continue
+            self.stats.add(
+                HeroStats(
+                    hero_id=hero_id,
+                    win_rate=reading.win_rate,
+                    pick_rate=reading.pick_rate,
+                    ban_rate=reading.ban_rate,
+                    matches=reading.matches,
+                    rank_filter=reading.rank_filter,
+                    patch=reading.patch,
+                    collected_at=reading.collected_at,
+                    source=self.provider.name,
+                )
+            )
+            result.stats += 1
+
+    def _sync_meta(self, result: SyncResult, index: dict[str, object]) -> None:
+        for entry in self.provider.get_meta():
+            hero = index.get(entry.hero_slug)
+            if hero is None:
+                result.warnings.append(f"meta de heroi desconhecido: {entry.hero_slug}")
+                continue
+            hero_id = hero.id  # type: ignore[attr-defined]
+            if self.meta.exists(
+                hero_id=hero_id,
+                lane=entry.lane,
+                patch=entry.patch,
+                collected_at=entry.collected_at,
+            ):
+                result.skipped += 1
+                continue
+            self.meta.add(
+                MetaSnapshot(
+                    hero_id=hero_id,
+                    lane=entry.lane,
+                    tier=entry.tier,
+                    score=entry.score,
+                    patch=entry.patch,
+                    collected_at=entry.collected_at,
+                    source=self.provider.name,
+                )
+            )
+            result.meta_snapshots += 1
