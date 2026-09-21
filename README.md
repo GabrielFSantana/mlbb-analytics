@@ -1,0 +1,290 @@
+# MLBB Analytics
+
+Plataforma de análise para **Mobile Legends: Bang Bang**: bot de Discord, API REST e
+banco PostgreSQL. Este repositório está na **Fase 1** — sistema de META funcionando
+ponta a ponta com dados de demonstração.
+
+> ### ⚠️ Sobre a origem dos dados
+>
+> A Moonton **não publica uma API oficial** adequada a este tipo de aplicação.
+> Nenhum endpoint da Moonton foi inventado aqui, e não há scraping no código.
+>
+> Todo acesso a dados passa pela interface [`MLBBDataProvider`](backend/app/providers/base.py).
+> A única implementação existente hoje é o `MockDataProvider`, cujos números são
+> **fictícios**. Isso é sinalizado em três lugares: no campo `is_mock` da API, no
+> `/health` e no rodapé dos embeds do Discord.
+>
+> Fontes reais só serão integradas depois de avaliação explícita de origem,
+> limitações técnicas, estabilidade e termos de uso.
+
+---
+
+## Sumário
+
+- [Arquitetura](#arquitetura)
+- [Estrutura de pastas](#estrutura-de-pastas)
+- [Como rodar com Docker](#como-rodar-com-docker)
+- [Como rodar localmente](#como-rodar-localmente-sem-docker)
+- [Configurando o bot no Discord](#configurando-o-bot-no-discord)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Endpoints](#endpoints)
+- [Comandos do bot](#comandos-do-bot)
+- [Testes](#testes)
+- [Como o score do meta é calculado](#como-o-score-do-meta-é-calculado)
+- [Roadmap](#roadmap)
+
+---
+
+## Arquitetura
+
+```
+┌──────────────┐     HTTP      ┌──────────────┐    SQL     ┌──────────────┐
+│ Discord Bot  │ ────────────▶ │ Backend API  │ ─────────▶ │  PostgreSQL  │
+│ (discord.py) │   /api/v1     │  (FastAPI)   │            │              │
+└──────────────┘               └──────┬───────┘            └──────────────┘
+                                      │
+                                      ▼
+                            ┌───────────────────┐
+                            │ MLBBDataProvider  │  ← única porta para fontes externas
+                            └───────────────────┘
+                                      │
+                       ┌──────────────┼───────────────┐
+                       ▼              ▼               ▼
+                 MockDataProvider  Manual*       CommunityAPI*
+                    (atual)                      (* futuros)
+```
+
+Decisões principais:
+
+| Decisão | Motivo |
+|---|---|
+| O bot **não** acessa o banco | A API é a única dona do schema; o bot pode ser reiniciado, escalado ou substituído sem migração. |
+| Camadas `api → services → repositories → models`, com `domain` no centro | Dependência sempre para dentro. Regras de negócio não conhecem FastAPI; repositórios não conhecem HTTP; `domain` não depende de nada. |
+| Providers com DTOs próprios | O formato de uma fonte externa nunca vaza para dentro do domínio. |
+| Cada leitura de estatística é uma linha nova | Constrói histórico próprio, mesmo que a fonte externa não tenha. Base para o job de atualização automática. |
+| Taxas armazenadas como fração (0.0–1.0) | Elimina a ambiguidade "53" vs "0.53" entre fontes. A API também expõe `*_pct` para UI. |
+
+## Estrutura de pastas
+
+```
+MLBB_PROJECT/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/    health, heroes, meta, patches
+│   │   ├── core/                config, logging, exceptions
+│   │   ├── domain/              scoring (logica pura, sem dependencias)
+│   │   ├── database/            engine, session, Base
+│   │   ├── models/              Hero, HeroStats, MetaSnapshot, Patch
+│   │   ├── schemas/             contratos de entrada/saída da API
+│   │   ├── repositories/        acesso a dados
+│   │   ├── services/            regras de negócio e sincronização
+│   │   ├── providers/           MLBBDataProvider e implementações
+│   │   ├── jobs/                (Fase 2) jobs periódicos
+│   │   ├── data/                mock_meta.json
+│   │   ├── cli.py               python -m app.cli sync
+│   │   └── main.py
+│   ├── alembic/                 migrations
+│   └── Dockerfile
+├── bot/
+│   ├── commands/                slash commands
+│   ├── core/                    config, logging
+│   ├── services/                cliente HTTP da API
+│   ├── ui/                      embeds
+│   ├── main.py
+│   └── Dockerfile
+├── tests/
+│   ├── unit/                    puros (sem banco)
+│   └── api/                     API + banco
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+## Como rodar com Docker
+
+Pré-requisito: Docker Desktop **em execução**.
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env` e preencha no mínimo `POSTGRES_PASSWORD`. Para o bot funcionar,
+preencha também `DISCORD_TOKEN` e `DISCORD_GUILD_ID`
+(veja [Configurando o bot](#configurando-o-bot-no-discord)).
+
+```bash
+docker compose up -d --build
+```
+
+Isso sobe três containers: `postgres`, `backend` (que aplica as migrations no boot)
+e `bot`. Em seguida, popule o banco com os dados de demonstração:
+
+```bash
+docker compose exec backend python -m app.cli sync
+```
+
+Verifique:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Documentação interativa: <http://localhost:8000/docs>
+
+Para acompanhar os logs:
+
+```bash
+docker compose logs -f backend bot
+```
+
+## Como rodar localmente (sem Docker)
+
+Ainda é necessário um PostgreSQL. O mais simples é subir só o banco via Docker:
+
+```bash
+docker compose up -d postgres
+```
+
+Depois:
+
+```bash
+python -m venv .venv
+.venv/Scripts/activate
+pip install -r requirements-dev.txt
+```
+
+Com o `.env` apontando `DATABASE_URL` para `localhost`, rode as migrations e o seed:
+
+```bash
+cd backend
+alembic upgrade head
+python -m app.cli sync
+uvicorn app.main:app --reload
+```
+
+E, em outro terminal, o bot:
+
+```bash
+python -m bot.main
+```
+
+## Configurando o bot no Discord
+
+1. Acesse <https://discord.com/developers/applications> e clique em **New Application**.
+2. No menu lateral, vá em **Bot** → **Add Bot**.
+3. Clique em **Reset Token**, copie o valor e cole em `DISCORD_TOKEN` no `.env`.
+   O token aparece **uma única vez** — se perder, gere outro.
+4. Ainda em **Bot**, desligue **Public Bot** se quiser que só você possa adicioná-lo.
+   Nenhum *Privileged Gateway Intent* é necessário: o bot usa apenas slash commands.
+5. Vá em **OAuth2 → URL Generator** e marque:
+   - Scopes: `bot` e `applications.commands`
+   - Bot Permissions: `Send Messages`, `Embed Links`, `Read Message History`
+6. Abra a URL gerada e adicione o bot ao seu servidor.
+7. No Discord, com o **Modo Desenvolvedor** ativo
+   (Configurações → Avançado → Modo Desenvolvedor), clique com o botão direito no
+   nome do servidor → **Copiar ID do servidor** e cole em `DISCORD_GUILD_ID`.
+   Com esse ID, os comandos aparecem **imediatamente**; sem ele, o registro global
+   do Discord pode levar até 1 hora.
+8. Repita o passo anterior no canal de atualizações de meta e preencha
+   `DISCORD_META_CHANNEL_ID` (usado só a partir da Fase 2).
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env`. O arquivo `.env` está no `.gitignore` e **nunca**
+deve ser commitado.
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `POSTGRES_USER` | sim | Usuário do Postgres (padrão `mlbb`). |
+| `POSTGRES_PASSWORD` | **sim** | Senha do Postgres. Sem ela o `docker compose` recusa subir. |
+| `POSTGRES_DB` | sim | Nome do banco (padrão `mlbb`). |
+| `DATABASE_URL` | sim | URL do backend. No compose o host é `postgres`; local, `localhost`. |
+| `DISCORD_TOKEN` | só para o bot | Token do Discord Developer Portal. |
+| `DISCORD_GUILD_ID` | recomendada | ID do servidor. Faz os slash commands aparecerem na hora. |
+| `DISCORD_META_CHANNEL_ID` | não | Canal de atualizações automáticas (Fase 2). |
+| `BACKEND_API_URL` | sim | URL da API vista pelo bot. |
+| `MLBB_PROVIDER` | sim | Fonte de dados. Hoje só `mock`. |
+| `APP_ENV` | não | `development` \| `staging` \| `production`. Em produção o log sai em JSON. |
+| `LOG_LEVEL` | não | `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+
+## Endpoints
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/health` | Estado do processo, do banco e do provider. |
+| GET | `/api/v1/heroes` | Lista heróis. Filtros: `role`, `search`, `limit`, `offset`. |
+| GET | `/api/v1/heroes/{id}` | Detalhe + estatística mais recente. |
+| GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug (usada pelo bot). |
+| GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
+| GET | `/api/v1/meta` | Tier list de todas as lanes. |
+| GET | `/api/v1/meta/{lane}` | Tier list de uma lane (`jungle`, `gold`, `mid`, `exp`, `roam`). |
+| GET | `/api/v1/patches` | Lista de patches. |
+| GET | `/api/v1/patches/current` | Patch vigente. |
+
+Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são fictícios.**
+
+## Comandos do bot
+
+| Comando | Status |
+|---|---|
+| `/meta` | ✅ Fase 1 — tier list de todas as lanes |
+| `/meta lane:<jungle\|gold\|mid\|exp\|roam>` | ✅ Fase 1 |
+| `/hero <nome>` | ⏳ Fase 3 |
+| `/build <herói>` | ⏳ Fase 5 |
+| `/patch` | ⏳ Fase 3 |
+| `/player`, `/track`, `/compare` | ⏳ Fase 4 |
+
+## Testes
+
+```bash
+.venv/Scripts/python.exe -m pytest
+```
+
+- `tests/unit/` — puros, rodam sem infraestrutura.
+- `tests/api/` — exigem PostgreSQL. Criam e destroem o database `mlbb_test`.
+  Se nenhum Postgres estiver acessível, são **pulados** com uma mensagem explicativa
+  (rode `docker compose up -d postgres` ou defina `TEST_DATABASE_URL`).
+
+SQLite não é usado nem em teste: a diferença de dialeto esconde justamente os bugs
+que esses testes deveriam pegar.
+
+## Como o score do meta é calculado
+
+O `score` (0–100) e o `tier` (S+ … D) são uma **métrica interna deste projeto**, não
+um número oficial do jogo nem de terceiros. A fórmula está documentada em
+[`backend/app/domain/scoring.py`](backend/app/domain/scoring.py):
+
+```
+score = 100 × (0.55 × win_rate_norm + 0.25 × pick_rate_norm + 0.20 × ban_rate_norm)
+```
+
+- `win_rate_norm`: win rate normalizada na faixa 42%–58%.
+- `pick_rate_norm`: pick rate saturando em 15%.
+- `ban_rate_norm`: ban rate saturando em 50%.
+
+Tiers: S+ ≥ 78 · S ≥ 66 · A ≥ 54 · B ≥ 42 · C ≥ 30 · D < 30.
+
+Mudar pesos ou limiares muda os tiers históricos — trate como mudança de contrato.
+
+Fórmulas do próprio jogo (dano, escalonamento de itens etc.) **não serão inventadas**:
+só entram no Build Simulator com fonte documentada ou cadastro explícito.
+
+## Roadmap
+
+| Fase | Escopo | Status |
+|---|---|---|
+| 1 | Estrutura, API, Postgres, Alembic, Docker, `/health`, heroes, meta, bot `/meta` | ✅ |
+| 2 | Job periódico (APScheduler), histórico, publicação automática em `#meta-updates` | ⏳ |
+| 3 | Avaliação e integração de fonte real; `/hero`, `/patch` | ⏳ |
+| 4 | Player Tracking, Match History (`/player`, `/track`, `/compare`) | ⏳ |
+| 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |
+| 6 | Dashboard web | ⏳ |
+
+Nenhuma fase avança sem autorização explícita.
+
+## Segurança
+
+- `.env` está no `.gitignore`; só `.env.example` é versionado.
+- `alembic.ini` tem `sqlalchemy.url` vazio de propósito — a URL vem do ambiente.
+- Os containers rodam com usuário sem privilégios (`appuser`, uid 1000).
+- Nenhum token, senha ou chave aparece no código ou nos logs.
