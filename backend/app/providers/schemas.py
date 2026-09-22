@@ -96,6 +96,25 @@ class HeroBuildData(ProviderDTO):
     collected_at: datetime
 
 
+class HeroSynergyData(ProviderDTO):
+    """Efeito medido de uma dupla de herois no mesmo time.
+
+    `win_rate_delta` e o deslocamento da taxa de vitoria quando os dois
+    aparecem juntos. Conferimos que a matriz da fonte e simetrica, entao o
+    numero pertence a DUPLA - nao e "quanto `partner` ajuda `hero`".
+    """
+
+    hero_slug: str
+    partner_slug: str
+    win_rate_delta: float = Field(
+        description="Fracao, com sinal. +0.0134 = 1,34 ponto percentual."
+    )
+    partner_win_rate: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Taxa de vitoria geral do parceiro."
+    )
+    collected_at: datetime
+
+
 class CommunityGuideData(ProviderDTO):
     """Um conjunto de itens tirado de um guia escrito por jogador.
 

@@ -33,6 +33,7 @@ from app.providers.schemas import (
     HeroData,
     HeroRelationData,
     HeroStatsData,
+    HeroSynergyData,
     ItemData,
     MatchData,
     MetaEntryData,
@@ -112,6 +113,14 @@ class MLBBDataProvider(ABC):
         Agregar e responsabilidade de `app.domain.comunidade`.
         """
         raise ProviderNotSupportedError(f"{self.name} nao fornece guias da comunidade")
+
+    def get_hero_allies(self, hero_slug: str) -> list[HeroSynergyData]:
+        """Efeito medido de cada dupla com este heroi no mesmo time. Opcional.
+
+        Um heroi por vez, como em `get_hero_builds` e pelo mesmo motivo: a
+        matriz completa custaria uma requisicao por heroi.
+        """
+        raise ProviderNotSupportedError(f"{self.name} nao fornece sinergia medida")
 
     def current_patch(self) -> str:
         """Versao do jogo a que os dados desta fonte se referem."""

@@ -19,6 +19,7 @@ EXTENSIONS: tuple[str, ...] = (
     "bot.commands.meta",
     "bot.commands.heroes",
     "bot.commands.draft",
+    "bot.commands.composicao",
     "bot.commands.equipe",
     "bot.commands.meta_updates",
 )

@@ -16,6 +16,7 @@ import httpx
 from bot.core.config import settings
 from bot.core.logging import get_logger
 from bot.services.schemas import (
+    Composition,
     DraftResponse,
     HeroBuilds,
     HeroCounters,
@@ -122,6 +123,11 @@ class MLBBApiClient:
             params["lane"] = lane
         payload = await self._get(f"/api/v1/builds/{quote(termo)}", **params)
         return HeroBuilds.model_validate(payload)
+
+    async def get_composition(self, herois: list[str]) -> Composition:
+        """Leitura de composicao pela sinergia medida entre as duplas."""
+        payload = await self._get("/api/v1/composition", hero=herois)
+        return Composition.model_validate(payload)
 
     async def get_draft(
         self,

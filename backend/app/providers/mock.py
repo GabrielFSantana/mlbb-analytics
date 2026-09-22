@@ -29,6 +29,7 @@ from app.providers.schemas import (
     HeroData,
     HeroRelationData,
     HeroStatsData,
+    HeroSynergyData,
     ItemData,
     MetaEntryData,
     PatchData,
@@ -292,6 +293,48 @@ class MockDataProvider(MLBBDataProvider):
             )
             for guia in range(MINIMO_DE_BUILDS + 3)
         ]
+
+    def get_hero_allies(self, hero_slug: str) -> list[HeroSynergyData]:
+        """Duplas ficticias porem deterministas.
+
+        Os deltas sao distribuidos de propositio em torno de zero e com a
+        mesma ordem de grandeza da fonte real (+-7pp no extremo, maioria
+        perto de zero), para que os limiares de `app.domain.composicao`
+        sejam exercitados de verdade em desenvolvimento.
+        """
+        data = self._data
+        herois = data["heroes"]
+        indices = {h["slug"]: i for i, h in enumerate(herois)}
+        if hero_slug not in indices:
+            return []
+
+        base = indices[hero_slug]
+        coletado_em = datetime.fromisoformat(data["collected_at"])
+        duplas: list[HeroSynergyData] = []
+        for posicao, parceiro in enumerate(herois):
+            if parceiro["slug"] == hero_slug:
+                continue
+            # Onda deterministica cobrindo as cinco faixas de leitura. Duas
+            # propriedades sao obrigatorias aqui:
+            #
+            # 1. SIMETRICA. Na fonte real o delta pertence ao par, e vale o
+            #    mesmo nos dois sentidos. Um mock assimetrico deixaria
+            #    passar codigo que depende da direcao da consulta - foi
+            #    exatamente o que um teste pegou quando `base` entrava sem
+            #    somar com `posicao`.
+            # 2. Passo 5, coprimo com 21: com um divisor comum a serie
+            #    cicla em poucos valores e faixas inteiras nunca apareceriam.
+            passo = (((base + posicao) * 5) % 21) - 10
+            duplas.append(
+                HeroSynergyData(
+                    hero_slug=hero_slug,
+                    partner_slug=parceiro["slug"],
+                    win_rate_delta=round(passo * 0.007, 5),
+                    partner_win_rate=parceiro["win_rate"],
+                    collected_at=coletado_em,
+                )
+            )
+        return duplas
 
     # -- patches --------------------------------------------------------
 

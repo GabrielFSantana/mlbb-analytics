@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.services.build_service import BuildService
+from app.services.composition_service import CompositionService
 from app.services.draft_service import DraftService
 from app.services.hero_service import HeroService
 from app.services.meta_service import MetaService
@@ -20,6 +21,10 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 def get_build_service(db: DbSession) -> BuildService:
     return BuildService(db)
+
+
+def get_composition_service(db: DbSession) -> CompositionService:
+    return CompositionService(db)
 
 
 def get_draft_service(db: DbSession) -> DraftService:
@@ -43,6 +48,7 @@ def get_weekly_ranking_service(db: DbSession) -> WeeklyRankingService:
 
 
 BuildServiceDep = Annotated[BuildService, Depends(get_build_service)]
+CompositionServiceDep = Annotated[CompositionService, Depends(get_composition_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
 HeroServiceDep = Annotated[HeroService, Depends(get_hero_service)]
 MetaServiceDep = Annotated[MetaService, Depends(get_meta_service)]

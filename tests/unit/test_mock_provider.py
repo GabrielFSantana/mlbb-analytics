@@ -96,3 +96,40 @@ def test_capacidades_nao_suportadas_falham_explicitamente(provider: MockDataProv
         provider.get_player("123", "456")
     with pytest.raises(ProviderNotSupportedError):
         provider.get_matches("123", "456")
+
+
+# -- sinergia -----------------------------------------------------------
+
+
+def test_sinergia_do_mock_e_simetrica():
+    """A fonte real mede o par, nao a direcao - o mock precisa imitar isso.
+
+    Sem esta propriedade, um mock assimetrico deixaria passar codigo que
+    depende de qual heroi foi consultado primeiro. Foi o que aconteceu: um
+    teste de composicao pegou justamente isso.
+    """
+    provider = MockDataProvider()
+    de_a = {d.partner_slug: d.win_rate_delta for d in provider.get_hero_allies("leomord")}
+
+    for parceiro, delta in de_a.items():
+        de_b = {d.partner_slug: d.win_rate_delta for d in provider.get_hero_allies(parceiro)}
+        assert de_b["leomord"] == delta, f"assimetria em leomord+{parceiro}"
+
+
+def test_sinergia_do_mock_cobre_as_cinco_faixas():
+    """Faixa que nunca aparece no mock e faixa que nunca e exercitada."""
+    from app.domain.composicao import ForcaDaDupla, classificar
+
+    duplas = MockDataProvider().get_hero_allies("leomord")
+    faixas = {classificar(d.win_rate_delta) for d in duplas}
+
+    assert faixas == set(ForcaDaDupla)
+
+
+def test_heroi_nao_forma_dupla_com_ele_mesmo_no_mock():
+    duplas = MockDataProvider().get_hero_allies("leomord")
+    assert all(d.partner_slug != "leomord" for d in duplas)
+
+
+def test_sinergia_de_heroi_inexistente_e_vazia():
+    assert MockDataProvider().get_hero_allies("nao-existe") == []

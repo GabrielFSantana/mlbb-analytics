@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from bot.core.logging import get_logger
 from bot.services.schemas import (
+    Composition,
     DraftResponse,
     HeroBuilds,
     HeroCounters,
@@ -1252,9 +1253,211 @@ async def render_weekly_ranking_card(dados: WeeklyRanking) -> bytes:
     return await asyncio.to_thread(_compor_ranking, dados)
 
 
+# ---------------------------------------------------------------------
+# Card de composicao
+# ---------------------------------------------------------------------
+
+RETRATO_DUPLA = 44
+ALTURA_DUPLA = 58
+
+#: Teto da barra, em pontos percentuais. O |delta| maximo observado na
+#: fonte foi 9,16pp; 8 deixa os casos extremos saturando a barra em vez de
+#: achatar todo o resto contra a parede.
+TETO_DA_BARRA_PP = 8.0
+
+CORES_FORCA: dict[str, tuple[int, int, int]] = {
+    "forte": (118, 200, 128),
+    "favoravel": (150, 190, 140),
+    "neutra": (130, 136, 150),
+    "desfavoravel": (220, 150, 120),
+    "muito_ruim": (255, 120, 110),
+}
+
+
+def _retrato_pequeno(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    dados: bytes | None,
+    x: int,
+    y: int,
+    mascara: Image.Image,
+) -> None:
+    retrato = None
+    if dados:
+        try:
+            retrato = Image.open(io.BytesIO(dados)).convert("RGBA")
+            retrato = retrato.resize((RETRATO_DUPLA, RETRATO_DUPLA), Image.LANCZOS)
+        except OSError:  # pragma: no cover - imagem corrompida
+            retrato = None
+    if retrato is not None:
+        imagem.paste(retrato, (x, y), mascara)
+    else:
+        desenho.rounded_rectangle(
+            (x, y, x + RETRATO_DUPLA, y + RETRATO_DUPLA), 10, fill=COR_BORDA
+        )
+
+
+def _linha_da_dupla(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    par,
+    x: int,
+    y: int,
+    retratos: dict[str, bytes],
+    mascara: Image.Image,
+) -> None:
+    fonte_nome = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_delta = _carregar_fonte(FONTES_NEGRITO, 16)
+    fonte_mais = _carregar_fonte(FONTES_NEGRITO, 18)
+
+    cor = CORES_FORCA.get(par.strength, COR_TEXTO_FRACO)
+
+    _retrato_pequeno(imagem, desenho, retratos.get(par.a.image_url or ""), x, y, mascara)
+    desenho.text(
+        (x + RETRATO_DUPLA + 6, y + RETRATO_DUPLA / 2 - 12), "+", font=fonte_mais, fill=COR_BORDA
+    )
+    x2 = x + RETRATO_DUPLA + 24
+    _retrato_pequeno(imagem, desenho, retratos.get(par.b.image_url or ""), x2, y, mascara)
+
+    tx = x2 + RETRATO_DUPLA + 16
+    nomes = f"{par.a.name} + {par.b.name}"
+    desenho.text(
+        (tx, y + 4), _encurtar(nomes, fonte_nome, 330), font=fonte_nome, fill=COR_TEXTO
+    )
+
+    # Barra proporcional ao tamanho do efeito, na cor da leitura.
+    _barra(
+        desenho,
+        tx,
+        y + 28,
+        330,
+        abs(par.delta_pp) / TETO_DA_BARRA_PP,
+        cor,
+        altura=8,
+    )
+
+    texto = f"{par.delta_pp:+.2f} pp"
+    largura = fonte_delta.getlength(texto)
+    desenho.text(
+        (LARGURA - MARGEM - 30 - largura, y + RETRATO_DUPLA / 2 - 10),
+        texto,
+        font=fonte_delta,
+        fill=cor,
+    )
+
+
+def _compor_composicao(dados: Composition, retratos: dict[str, bytes]) -> bytes:
+    fonte_titulo = _carregar_fonte(FONTES_NEGRITO, 30)
+    fonte_sub = _carregar_fonte(FONTES_REGULARES, 14)
+    fonte_nota = _carregar_fonte(FONTES_REGULARES, 12)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 13)
+
+    um_heroi = len(dados.heroes) == 1
+    pares = dados.pairs
+
+    altura = MARGEM + 24 + 76
+    altura += len(pares) * ALTURA_DUPLA + 12
+    altura += 40  # duas linhas de nota
+    if dados.unknown_terms:
+        altura += 26
+    altura += 46 + MARGEM
+
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+
+    x0 = MARGEM + 26
+    if um_heroi:
+        titulo = f"DUPLAS DE {dados.heroes[0].name.upper()}"
+        subtitulo = "As mais favoraveis e as mais desfavoraveis, por efeito medido"
+    else:
+        titulo = f"COMPOSICAO · {len(dados.heroes)} HEROIS"
+        subtitulo = " · ".join(h.name for h in dados.heroes)
+    desenho.text((x0, MARGEM + 22), titulo, font=fonte_titulo, fill=COR_TEXTO)
+    desenho.text(
+        (x0, MARGEM + 60),
+        _encurtar(subtitulo, fonte_sub, LARGURA - 2 * x0),
+        font=fonte_sub,
+        fill=COR_TEXTO_FRACO,
+    )
+
+    y = MARGEM + 100
+    if not um_heroi:
+        resumo = (
+            f"{dados.favorable} favoraveis · {dados.unfavorable} desfavoraveis · "
+            f"{dados.neutral} sem efeito mensuravel"
+        )
+        desenho.text((x0, y - 12), resumo, font=fonte_sub, fill=COR_TEXTO_FRACO)
+        y += 14
+
+    mascara = _mascara_arredondada(RETRATO_DUPLA, 10)
+    for par in pares:
+        _linha_da_dupla(imagem, desenho, par, x0, y, retratos, mascara)
+        y += ALTURA_DUPLA
+    y += 12
+
+    # As duas frases que impedem a leitura errada do card.
+    desenho.text(
+        (x0, y),
+        "Deslocamento medido da taxa de vitoria quando os dois jogam juntos. "
+        "O efeito e da DUPLA, nao de um ajudando o outro.",
+        font=fonte_nota,
+        fill=COR_TEXTO_FRACO,
+    )
+    desenho.text(
+        (x0, y + 18),
+        "Nao somamos os pares: efeito de dupla nao e aditivo, e o total "
+        "pareceria uma previsao que ninguem mediu.",
+        font=fonte_nota,
+        fill=COR_TEXTO_FRACO,
+    )
+    y += 40
+
+    if dados.unknown_terms:
+        desenho.text(
+            (x0, y),
+            "Nao reconheci: " + ", ".join(dados.unknown_terms),
+            font=fonte_sub,
+            fill=(255, 160, 64),
+        )
+
+    partes = [f"Fonte: {dados.source}"]
+    if dados.collected_at:
+        partes.append(dados.collected_at.strftime("Coletado em %d/%m/%Y"))
+    if not dados.source_available:
+        partes.append("FONTE INDISPONIVEL: dado da ultima coleta")
+    if dados.is_mock:
+        partes.append("DADOS MOCK")
+    desenho.text(
+        (x0, altura - MARGEM - 26), " · ".join(partes), font=fonte_rodape, fill=COR_TEXTO_FRACO
+    )
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_composition_card(dados: Composition) -> bytes | None:
+    """Gera o PNG da composicao. None quando nao ha dupla medida para desenhar."""
+    if not dados.pairs:
+        return None
+    urls = [h.image_url for h in dados.heroes if h.image_url]
+    urls += [
+        par.image_url
+        for p in dados.pairs
+        for par in (p.a, p.b)
+        if par.image_url
+    ]
+    retratos = await _baixar_retratos(urls)
+    return await asyncio.to_thread(_compor_composicao, dados, retratos)
+
+
 __all__ = [
     "LANE_LABELS",
     "render_build_card",
+    "render_composition_card",
     "render_counters_card",
     "render_draft_card",
     "render_hero_card",

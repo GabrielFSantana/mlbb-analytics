@@ -229,6 +229,7 @@ deve ser commitado.
 | `MLBB_API_TIMEOUT` | não | Timeout das chamadas à fonte, em segundos. |
 | `MLBB_API_CACHE_SECONDS` | não | Cache curto, evita repetir chamadas na mesma coleta. |
 | `BUILDS_CACHE_HOURS` | não | Validade das builds gravadas antes de consultar a fonte. Padrão 24. |
+| `SYNERGY_CACHE_HOURS` | não | Validade da sinergia medida gravada. Padrão 24. |
 | `TEAM_STAR_GOAL` | não | Meta de estrelas do time. Padrão 200. |
 | `SYNC_ENABLED` | não | Liga a coleta automática. Padrão `true`. |
 | `SYNC_HOURS` | não | Horas UTC da coleta, separadas por vírgula. Padrão `6,18`. |
@@ -248,6 +249,7 @@ deve ser commitado.
 | GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug. Aceita `rank`. |
 | GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
 | GET | `/api/v1/builds/{termo}` | Builds recomendadas. Aceita `lane` e `rank_filter`. |
+| GET | `/api/v1/composition` | Efeito medido das duplas. Repita `hero` (até 5). |
 | GET | `/api/v1/draft/suggest` | Sugestões de pick. Aceita `enemy`, `ally`, `lane`, `rank`. |
 | POST | `/api/v1/players/stars` | Registra um reporte de estrelas. |
 | GET | `/api/v1/players/progress` | Progresso do time. Aceita `goal` e `window_days`. |
@@ -272,6 +274,7 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | `/hero <nome> [ranque] [formato]` | ✅ — ficha em **imagem** (padrão) ou texto |
 | `/counter <nome> [formato]` | ✅ — forte contra, fraco contra, combina com, em **imagem** |
 | `/build <herói> [lane] [formato]` | ✅ — núcleo estatístico (itens centrais, emblema, feitiço, talentos) **e** build completa de seis agregada dos guias da comunidade, em **imagem** |
+| `/composicao <heróis> [formato]` | ✅ — efeito **medido** de cada dupla do time, em pontos percentuais, em **imagem** |
 | `/draft inimigos:<...> [aliados] [lane] [ranque]` | ✅ — sugere picks e explica o porquê, em **imagem** |
 | `/estrelas <n> [nota]` | ✅ — registra suas estrelas |
 | `/progresso [meta] [formato]` | ✅ — progresso do time rumo à meta, em **imagem** |
@@ -490,6 +493,49 @@ mesmos itens** e diferirem só nos **talentos de emblema**. Sem exibir os talent
 três opções saíam idênticas na tela e o comando parecia quebrado. Os talentos agora
 aparecem em cada opção — resolvidos para nome via `/api/academy/emblems`.
 
+## Composição: sinergia medida, não inferida
+
+`/composicao Kagura, Tigreal, Beatrix, Fanny, Angela` responde uma pergunta que o
+`/draft` não responde: **o time que já está montado funciona junto?**
+
+A fonte publica, para cada par de heróis do mesmo time, quanto a taxa de vitória se
+desloca quando os dois aparecem juntos. Não é inferência nossa nem heurística — é
+medição.
+
+### O número é da dupla
+
+Conferimos **56 pares nos dois sentidos** e o valor é idêntico: A→B e B→A dão sempre
+o mesmo `increase_win_rate`. Ou seja, o número pertence ao **par**, não a um herói
+ajudando o outro. O card e o embed dizem isso com todas as letras, porque "Tigreal
+ajuda Angela" inverteria o sentido do dado.
+
+Isso também economiza requisição: para um time de N heróis bastam **N−1** consultas,
+já que a linha do último só repetiria pares que os anteriores trouxeram.
+
+### O piso de ruído saiu do dado
+
+Medido em 22/09/2026 sobre **1056 pares reais** de 8 heróis sorteados:
+
+| p10 | p25 | p50 | p75 | p90 | máx |
+|---|---|---|---|---|---|
+| 0,11 pp | 0,28 pp | 0,63 pp | 1,33 pp | 2,80 pp | 9,16 pp |
+
+Metade dos pares fica abaixo de 0,63 pp. Chamar isso de sinergia seria dar nome a
+ruído — ainda mais porque a fonte **não publica o tamanho da amostra** de cada par.
+Por isso só afirmamos algo a partir de **1,0 pp**, e destacamos a partir de **2,5 pp**
+(≈ p90). O resto é contado como "sem efeito mensurável" e aparece cinza.
+
+### Não existe nota geral
+
+Somar os deltas das duplas produziria um número com cara de previsão de vitória que
+ninguém mediu — efeito de par **não é aditivo**. O comando conta quantas duplas ajudam,
+quantas atrapalham, e mostra as mais fortes de cada lado. Isso o dado sustenta; uma
+nota, não.
+
+> Um resultado que dá confiança na leitura: as cinco piores duplas da Kagura incluem
+> quatro mages (Xavier, Luo Yi, Vexana, Vale). Comp de mage duplo ser ruim é folclore
+> conhecido do jogo — e aqui ele aparece medido, não afirmado.
+
 ## Como o score do meta é calculado
 
 O `score` (0–100) e o `tier` (S+ … D) são uma **métrica interna deste projeto**, não
@@ -530,6 +576,7 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 | 3b | Comandos `/hero`, `/counter`, `/patch` | ✅ |
 | 3c | Comando `/build` | ✅ |
 | 3d | Build completa agregada dos guias da comunidade | ✅ |
+| 3e | Composição por sinergia medida (`/composicao`) | ✅ |
 | 4 | Player Tracking auto-reportado (`/estrelas`, `/progresso`) | ✅ |
 | 4b | Leitura automática de perfil e partidas | 🚫 bloqueado por acesso |
 | 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |

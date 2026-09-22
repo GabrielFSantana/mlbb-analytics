@@ -155,6 +155,34 @@ class HeroBuilds(ApiModel):
     source_available: bool = True
 
 
+class Pair(ApiModel):
+    """Uma dupla e o deslocamento medido para ela.
+
+    O numero e da DUPLA: a matriz da fonte e simetrica. Dizer "b ajuda a"
+    inverteria o sentido do dado.
+    """
+
+    a: Hero
+    b: Hero
+    win_rate_delta: float
+    delta_pp: float
+    strength: str
+    partner_win_rate: float | None = None
+
+
+class Composition(ApiModel):
+    heroes: list[Hero] = []
+    pairs: list[Pair] = []
+    favorable: int = 0
+    unfavorable: int = 0
+    neutral: int = 0
+    unknown_terms: list[str] = []
+    collected_at: datetime | None = None
+    source: str
+    is_mock: bool = False
+    source_available: bool = True
+
+
 class DraftCandidate(ApiModel):
     hero: Hero
     lane: str

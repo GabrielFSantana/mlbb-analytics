@@ -33,6 +33,7 @@ ROTAS = {
     "/api/academy/emblems": "rone_emblems.json",
     f"/api/academy/heroes/{HEROI_FIXTURE}/builds": "rone_builds.json",
     f"/api/academy/heroes/{HEROI_FIXTURE}/recommended": "rone_recommended.json",
+    f"/api/academy/heroes/{HEROI_FIXTURE}/teammates": "rone_teammates.json",
 }
 
 
@@ -353,3 +354,67 @@ def test_posicoes_em_branco_nao_viram_item(provider: RoneArenaProvider):
     """A fonte devolve [null, null, ...] em guia mal preenchido."""
     guias = provider.get_community_guides(SLUG_FIXTURE)
     assert all(all(i for i in g.item_ids) for g in guias)
+
+
+# -- sinergia medida ----------------------------------------------------
+
+
+def test_sinergia_traz_o_delta_com_sinal(provider: RoneArenaProvider):
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+
+    assert duplas
+    assert any(d.win_rate_delta > 0 for d in duplas)
+    assert any(d.win_rate_delta < 0 for d in duplas)
+    assert all(d.hero_slug == SLUG_FIXTURE for d in duplas)
+
+
+def test_sinergia_ignora_o_campo_inimigo(provider: RoneArenaProvider):
+    """A fixture tem uma linha com camp_type 0; ela mede outra coisa."""
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+    # O unico parceiro exclusivo da linha inimiga nao pode aparecer com o
+    # delta dela (+0.05).
+    assert all(d.win_rate_delta != 0.05 for d in duplas)
+
+
+def test_heroi_nao_forma_dupla_com_ele_mesmo(provider: RoneArenaProvider):
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+    assert all(d.partner_slug != SLUG_FIXTURE for d in duplas)
+
+
+def test_parceiro_fora_do_catalogo_e_ignorado(provider: RoneArenaProvider):
+    """Melhor pular que inventar um nome para o heroi 999 no card."""
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+
+    # A fixture traz 9 entradas; 4 sao descartadas por motivos distintos
+    # (o proprio heroi, um id fora do catalogo, uma repeticao e um delta
+    # ausente). Sobram exatamente os cinco parceiros reais.
+    assert len(duplas) == 5
+    assert {d.partner_slug for d in duplas} == {
+        "marcel", "sora", "obsidia", "zetian", "kalea"
+    }
+
+
+def test_parceiro_repetido_entra_uma_vez_so(provider: RoneArenaProvider):
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+    slugs = [d.partner_slug for d in duplas]
+    assert len(slugs) == len(set(slugs))
+
+
+def test_dupla_sem_delta_e_descartada(provider: RoneArenaProvider):
+    """Sem o numero nao ha o que afirmar; zero seria uma afirmacao falsa."""
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+    por_slug = {d.partner_slug: d.win_rate_delta for d in duplas}
+
+    # "sora" aparece duas vezes na fixture: uma com delta e outra sem. A
+    # entrada valida e que tem de sobreviver, nao um zero inventado.
+    assert por_slug["sora"] == -0.0003
+
+
+def test_sinergia_traz_a_win_rate_do_parceiro(provider: RoneArenaProvider):
+    duplas = provider.get_hero_allies(SLUG_FIXTURE)
+    assert all(d.partner_win_rate for d in duplas)
+
+
+def test_sinergia_de_heroi_desconhecido_e_erro(provider: RoneArenaProvider):
+    with pytest.raises(ProviderError, match="nao existe na fonte"):
+        provider.get_hero_allies("heroi-que-nao-existe")

@@ -48,6 +48,7 @@ from app.providers.schemas import (
     HeroData,
     HeroRelationData,
     HeroStatsData,
+    HeroSynergyData,
     ItemData,
     MetaEntryData,
     PatchData,
@@ -424,6 +425,60 @@ class RoneArenaProvider(MLBBDataProvider):
                         )
                     )
         return relacoes
+
+    # -- sinergia medida ------------------------------------------------
+
+    def get_hero_allies(self, hero_slug: str) -> list[HeroSynergyData]:
+        """Efeito de cada dupla com este heroi, medido pela fonte.
+
+        O endpoint devolve a linha inteira da matriz - hoje 132 parceiros -
+        numa unica chamada. `camp_type` separa aliado (1) de inimigo (0);
+        aqui so nos interessa o time proprio, entao filtramos.
+
+        Cuidado com o tipo de `camp_type`: a fonte devolve int em um
+        endpoint e string no outro, entao comparamos como texto.
+        """
+        hero_id = self._hero_id_por_slug(hero_slug)
+        if hero_id is None:
+            raise ProviderError(f"{self.name}: heroi '{hero_slug}' nao existe na fonte")
+
+        payload = self._get(
+            f"/api/academy/heroes/{hero_id}/teammates", size=20, index=1, lang="en"
+        )
+        por_id = {hid: info["name"] for hid, info in self._catalog().items()}
+        coletado_em = self._collected_at()
+
+        duplas: list[HeroSynergyData] = []
+        vistos: set[int] = set()
+        for registro in self._records(payload):
+            dados = registro.get("data") or {}
+            if str(dados.get("camp_type")) != "1":
+                continue
+            for parceiro in dados.get("sub_hero") or []:
+                parceiro_id = parceiro.get("heroid")
+                delta = parceiro.get("increase_win_rate")
+                if not parceiro_id or delta is None:
+                    continue
+                parceiro_id = int(parceiro_id)
+                # Dupla de um heroi com ele mesmo nao existe.
+                if parceiro_id == hero_id or parceiro_id in vistos:
+                    continue
+                nome = por_id.get(parceiro_id)
+                if nome is None:
+                    # Heroi fora do catalogo: pular e melhor que inventar
+                    # um nome para ele no card.
+                    continue
+                vistos.add(parceiro_id)
+                duplas.append(
+                    HeroSynergyData(
+                        hero_slug=hero_slug,
+                        partner_slug=slugify(nome),
+                        win_rate_delta=float(delta),
+                        partner_win_rate=parceiro.get("hero_win_rate"),
+                        collected_at=coletado_em,
+                    )
+                )
+        return duplas
 
     # -- itens e builds -------------------------------------------------
 

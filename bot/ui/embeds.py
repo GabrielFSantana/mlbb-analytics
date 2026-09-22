@@ -11,6 +11,7 @@ from datetime import datetime
 import discord
 
 from bot.services.schemas import (
+    Composition,
     DraftCandidate,
     DraftResponse,
     HeroBuilds,
@@ -454,6 +455,103 @@ def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
     rodape = [f"Fonte: {dados.source}"]
     if dados.collected_at:
         rodape.append(f"Coletado: {_format_timestamp(dados.collected_at)}")
+    if dados.is_mock:
+        rodape.append("DADOS MOCK")
+    embed.set_footer(text=" • ".join(rodape))
+    return embed
+
+
+#: Como cada faixa de `app.domain.composicao` aparece no texto.
+FORCA_LABELS: dict[str, str] = {
+    "forte": "🟢 forte",
+    "favoravel": "🟩 favoravel",
+    "neutra": "⬜ sem efeito mensuravel",
+    "desfavoravel": "🟧 desfavoravel",
+    "muito_ruim": "🔴 muito ruim",
+}
+
+
+def build_composition_embed(dados: Composition) -> discord.Embed:
+    """Leitura de composicao pela sinergia medida entre as duplas."""
+    um_heroi = len(dados.heroes) == 1
+    if um_heroi:
+        titulo = f"🤝 Duplas de {dados.heroes[0].name}"
+    else:
+        titulo = f"🤝 Composicao — {len(dados.heroes)} herois"
+
+    embed = discord.Embed(
+        title=titulo,
+        colour=COLOR_MOCK if dados.is_mock else COLOR_HERO,
+        description=MOCK_WARNING if dados.is_mock else None,
+    )
+
+    if not dados.heroes:
+        embed.description = (
+            f"{embed.description}\n\n" if embed.description else ""
+        ) + "Nao reconheci nenhum heroi no que voce digitou."
+        if dados.unknown_terms:
+            embed.add_field(
+                name="Nao reconheci", value=", ".join(dados.unknown_terms), inline=False
+            )
+        return embed
+
+    if not dados.pairs:
+        # Distinguir "a fonte esta fora" de "nao ha dupla medida" - sao
+        # causas diferentes e levam a pessoa a acoes diferentes.
+        if dados.source_available:
+            motivo = (
+                "A fonte nao tem medicao para essas duplas. Com um heroi so, "
+                "tente outro; com o time montado, confira os nomes."
+            )
+        else:
+            motivo = (
+                "A fonte de dados esta **indisponivel** no momento e ainda nao temos "
+                "sinergia guardada desses herois. Tente de novo em instantes."
+            )
+        embed.description = (
+            f"{embed.description}\n\n" if embed.description else ""
+        ) + motivo
+        return embed
+
+    if not um_heroi:
+        embed.add_field(
+            name="Resumo",
+            value=(
+                f"**{dados.favorable}** favoraveis · **{dados.unfavorable}** desfavoraveis · "
+                f"**{dados.neutral}** sem efeito mensuravel"
+            ),
+            inline=False,
+        )
+
+    linhas = [
+        f"`{par.delta_pp:+6.2f} pp` **{par.a.name} + {par.b.name}** — "
+        f"{FORCA_LABELS.get(par.strength, par.strength)}"
+        for par in dados.pairs
+    ]
+    embed.add_field(name="Duplas", value="\n".join(linhas), inline=False)
+
+    embed.add_field(
+        name="ℹ️ Como ler",
+        value=(
+            "Deslocamento medido da taxa de vitoria quando os dois jogam juntos. "
+            "O efeito e da **dupla** — a matriz da fonte e simetrica, entao nao ha "
+            "um heroi ajudando o outro.\n"
+            "Nao somamos os pares: efeito de dupla **nao e aditivo**, e um total "
+            "pareceria uma previsao que ninguem mediu."
+        ),
+        inline=False,
+    )
+
+    if dados.unknown_terms:
+        embed.add_field(
+            name="⚠️ Nao reconheci", value=", ".join(dados.unknown_terms), inline=False
+        )
+
+    rodape = [f"Fonte: {dados.source}"]
+    if dados.collected_at:
+        rodape.append(f"Coletado: {_format_timestamp(dados.collected_at)}")
+    if not dados.source_available:
+        rodape.append("FONTE INDISPONIVEL")
     if dados.is_mock:
         rodape.append("DADOS MOCK")
     embed.set_footer(text=" • ".join(rodape))

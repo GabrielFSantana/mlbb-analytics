@@ -12,6 +12,7 @@ import pytest
 from PIL import Image
 
 from bot.services.schemas import (
+    Composition,
     DraftResponse,
     HeroBuilds,
     HeroCounters,
@@ -589,3 +590,78 @@ def test_posicoes_do_podio_tem_cor_propria():
     """Medalhas sao desenhadas: a fonte do container nao tem emoji colorido."""
     assert set(cards.CORES_POSICAO) == {0, 1, 2}
     assert len(set(cards.CORES_POSICAO.values())) == 3
+
+
+# -- card de composicao -------------------------------------------------
+
+
+def composicao(**overrides: object) -> Composition:
+    def par(nome_b: str, delta: float, forca: str) -> dict:
+        return {
+            "a": heroi_simples("Kagura"),
+            "b": heroi_simples(nome_b),
+            "win_rate_delta": delta,
+            "delta_pp": round(delta * 100, 2),
+            "strength": forca,
+            "partner_win_rate": 0.52,
+        }
+
+    base: dict[str, object] = {
+        "heroes": [heroi_simples("Kagura"), heroi_simples("Tigreal")],
+        "pairs": [
+            par("Tigreal", 0.0674, "forte"),
+            par("Franco", 0.0134, "favoravel"),
+            par("Layla", 0.0002, "neutra"),
+            par("Xavier", -0.0731, "muito_ruim"),
+        ],
+        "favorable": 2,
+        "unfavorable": 1,
+        "neutral": 1,
+        "source": "rone_arena",
+        "is_mock": False,
+        "collected_at": datetime(2026, 9, 22, tzinfo=UTC),
+        "source_available": True,
+    }
+    base.update(overrides)
+    return Composition.model_validate(base)
+
+
+async def test_composicao_card_gera_png():
+    dados = await cards.render_composition_card(composicao())
+    assert dados is not None
+    assert Image.open(io.BytesIO(dados)).width == cards.LARGURA
+
+
+async def test_composicao_card_sem_duplas_nao_renderiza():
+    """Sem dupla medida nao ha card: o embed explica o motivo."""
+    assert await cards.render_composition_card(composicao(pairs=[])) is None
+
+
+async def test_composicao_card_cresce_com_as_duplas():
+    poucas = composicao(pairs=composicao().pairs[:2])
+    muitas = composicao()
+
+    card_poucas = await cards.render_composition_card(poucas)
+    card_muitas = await cards.render_composition_card(muitas)
+    assert card_poucas is not None and card_muitas is not None
+    assert (
+        Image.open(io.BytesIO(card_muitas)).height
+        > Image.open(io.BytesIO(card_poucas)).height
+    )
+
+
+async def test_composicao_card_de_um_heroi_renderiza():
+    um = composicao(heroes=[heroi_simples("Kagura")])
+    assert await cards.render_composition_card(um) is not None
+
+
+async def test_composicao_card_sem_retrato_nao_quebra():
+    sem_imagem = composicao(
+        heroes=[heroi_simples("Kagura", None), heroi_simples("Tigreal", None)]
+    )
+    assert await cards.render_composition_card(sem_imagem) is not None
+
+
+async def test_composicao_card_com_termo_desconhecido_renderiza():
+    dados = composicao(unknown_terms=["kagurra"])
+    assert await cards.render_composition_card(dados) is not None

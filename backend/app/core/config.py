@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # gravado continua valendo antes de consultar a fonte de novo.
     builds_cache_hours: int = 24
 
+    # Sinergia medida tambem e buscada sob demanda, um heroi por consulta.
+    # Mesma logica das builds: a fonte remede junto com o patch, entao um
+    # dia de validade e generoso e economiza a chamada mais cara.
+    synergy_cache_hours: int = 24
+
     # --- Meta de estrelas do time -------------------------------------
     # Alvo padrao do acompanhamento. Pode ser sobrescrito por consulta.
     team_star_goal: int = 200

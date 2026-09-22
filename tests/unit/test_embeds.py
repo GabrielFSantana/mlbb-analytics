@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import pytest
 
 from bot.services.schemas import (
+    Composition,
     Hero,
     HeroBuilds,
     HeroCounters,
@@ -19,6 +20,7 @@ from bot.services.schemas import (
 from bot.ui.embeds import (
     MOCK_WARNING,
     build_builds_embed,
+    build_composition_embed,
     build_counters_embed,
     build_hero_embed,
     build_meta_embed,
@@ -438,3 +440,75 @@ def test_build_embed_diz_que_frequencia_nao_e_taxa_de_vitoria():
 def test_build_embed_sem_comunidade_nao_cria_o_campo():
     embed = build_builds_embed(_builds_com_comunidade(community=None))
     assert not [f for f in embed.fields if "comunidade" in f.name]
+
+
+def _composicao(**overrides):
+    def heroi(nome):
+        return {"id": abs(hash(nome)) % 1000, "name": nome,
+                "slug": nome.lower(), "role": "mage"}
+
+    def par(nome_b, delta, forca):
+        return {"a": heroi("Kagura"), "b": heroi(nome_b), "win_rate_delta": delta,
+                "delta_pp": round(delta * 100, 2), "strength": forca}
+
+    base = {
+        "heroes": [heroi("Kagura"), heroi("Tigreal")],
+        "pairs": [par("Tigreal", 0.0674, "forte"), par("Xavier", -0.0731, "muito_ruim")],
+        "favorable": 1,
+        "unfavorable": 1,
+        "neutral": 0,
+        "source": "rone_arena",
+        "is_mock": False,
+        "source_available": True,
+    }
+    base.update(overrides)
+    return Composition.model_validate(base)
+
+
+def test_composicao_embed_lista_as_duplas():
+    embed = build_composition_embed(_composicao())
+    campo = next(f for f in embed.fields if f.name == "Duplas")
+
+    assert "Kagura + Tigreal" in (campo.value or "")
+    assert "+6.74 pp" in (campo.value or "")
+    assert "-7.31 pp" in (campo.value or "")
+
+
+def test_composicao_embed_avisa_que_o_efeito_e_da_dupla():
+    """O erro de leitura mais provavel: achar que um ajuda o outro."""
+    embed = build_composition_embed(_composicao())
+    campo = next(f for f in embed.fields if "Como ler" in f.name)
+
+    texto = (campo.value or "").lower()
+    assert "da **dupla**" in texto
+    assert "nao e aditivo" in texto
+
+
+def test_composicao_embed_de_um_heroi_muda_o_titulo():
+    embed = build_composition_embed(_composicao(heroes=[{"id": 1, "name": "Kagura",
+                                                        "slug": "kagura", "role": "mage"}]))
+    assert "Duplas de Kagura" in (embed.title or "")
+    # Com um heroi so nao ha composicao para resumir.
+    assert not [f for f in embed.fields if f.name == "Resumo"]
+
+
+def test_composicao_embed_distingue_fonte_fora_de_lista_vazia():
+    sem_dado = build_composition_embed(_composicao(pairs=[]))
+    assert "nao tem medicao" in (sem_dado.description or "")
+
+    fonte_fora = build_composition_embed(_composicao(pairs=[], source_available=False))
+    assert "indisponivel" in (fonte_fora.description or "")
+    assert "nao tem medicao" not in (fonte_fora.description or "")
+
+
+def test_composicao_embed_sem_heroi_reconhecido():
+    embed = build_composition_embed(_composicao(heroes=[], pairs=[], unknown_terms=["xpto"]))
+
+    assert "Nao reconheci nenhum heroi" in (embed.description or "")
+    assert [f for f in embed.fields if "reconheci" in f.name]
+
+
+def test_composicao_embed_mostra_o_resumo_por_faixa():
+    embed = build_composition_embed(_composicao())
+    campo = next(f for f in embed.fields if f.name == "Resumo")
+    assert "sem efeito mensuravel" in (campo.value or "")
