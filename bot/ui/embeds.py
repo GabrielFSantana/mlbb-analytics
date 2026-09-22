@@ -22,6 +22,7 @@ from bot.services.schemas import (
     Patch,
     PlayerProgress,
     TeamProgress,
+    WeeklyRanking,
 )
 
 LANE_LABELS: dict[str, str] = {
@@ -584,6 +585,43 @@ def build_progress_embed(dados: TeamProgress) -> discord.Embed:
         sinal = "+" if dados.team_stars_gained >= 0 else ""
         resumo.append(f"{sinal}{dados.team_stars_gained} em {dados.window_days} dias")
     embed.add_field(name="Time", value=" · ".join(resumo), inline=False)
+
+    embed.set_footer(text=AVISO_AUTO_REPORTADO)
+    return embed
+
+
+def build_weekly_ranking_embed(dados: WeeklyRanking) -> discord.Embed:
+    """Alternativa em texto do card de ranking semanal."""
+    periodo = f"{dados.week_start.strftime('%d/%m')} a {dados.week_end.strftime('%d/%m')}"
+    sinal = "+" if dados.team_stars_gained >= 0 else ""
+
+    embed = discord.Embed(
+        title="🏅 Ranking da semana",
+        colour=COLOR_META_TIME,
+        description=(
+            f"**{periodo}** · {dados.players_reported} reportaram · "
+            f"time: **{sinal}{dados.team_stars_gained}** estrelas"
+        ),
+    )
+
+    if not dados.movers:
+        embed.add_field(
+            name="Sem movimentacao",
+            value="Ninguem reportou estrelas nesta semana.",
+            inline=False,
+        )
+    else:
+        medalhas = {0: "🥇", 1: "🥈", 2: "🥉"}
+        linhas = []
+        for posicao, jogador in enumerate(dados.movers):
+            marca = medalhas.get(posicao, f"**{posicao + 1}.**")
+            ganho = f"{'+' if jogador.stars_gained >= 0 else ''}{jogador.stars_gained}"
+            extra = " 🎯 **bateu a meta!**" if jogador.crossed_goal else ""
+            linhas.append(
+                f"{marca} **{jogador.display_name}** {ganho} "
+                f"({jogador.stars_start} → {jogador.stars_end}){extra}"
+            )
+        embed.add_field(name="Destaques", value="\n".join(linhas), inline=False)
 
     embed.set_footer(text=AVISO_AUTO_REPORTADO)
     return embed

@@ -251,6 +251,8 @@ deve ser commitado.
 | GET | `/api/v1/draft/suggest` | Sugestões de pick. Aceita `enemy`, `ally`, `lane`, `rank`. |
 | POST | `/api/v1/players/stars` | Registra um reporte de estrelas. |
 | GET | `/api/v1/players/progress` | Progresso do time. Aceita `goal` e `window_days`. |
+| GET | `/api/v1/players/weekly-ranking/pending` | Ranking semanal não publicado. |
+| POST | `/api/v1/players/weekly-ranking/ack` | Confirma a publicação do ranking. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
 | GET | `/api/v1/meta` | Tier list de todas as lanes. Aceita `rank`. |
 | GET | `/api/v1/meta/{lane}` | Tier list de uma lane. Aceita `rank`. |
@@ -304,7 +306,8 @@ não publicada. Havendo mudanças relevantes, publica um embed em
 `DISCORD_META_CHANNEL_ID` e confirma o envio.
 
 **Por que a confirmação existe.** O estado de "já publicado" fica na tabela
-`meta_announcements`, no banco — não na memória do bot. Sem isso, reiniciar o bot
+`announcements` (genérica: serve ao meta e ao ranking semanal), no banco — não na
+memória do bot. Sem isso, reiniciar o bot
 republicaria a mesma atualização, e uma falha no meio faria a mensagem se perder. A
 confirmação só acontece **depois** do envio dar certo: se o Discord recusar, a próxima
 passagem tenta de novo.
@@ -341,6 +344,23 @@ leituras coladas produz número sem significado, e número sem significado numa
 interface vira decisão errada.
 
 Ritmo negativo **não** é escondido: perder estrela é informação.
+
+### Ranking semanal automático
+
+Toda semana, o bot publica no canal de atualizações quem mais subiu — com o ganho de
+cada um, quem cruzou a meta e o total do time. A semana é ISO (segunda a domingo,
+fechada em UTC), e o ranking sai sobre a semana **já encerrada**, que é a que tem dado
+completo.
+
+Regras que evitam ruído e invenção:
+
+- Quem **não reportou** na semana fica de fora. Dizer que ficou parado seria inventar
+  um dado que ninguém deu.
+- O ponto de partida é o último reporte **antes** da semana; quem começou a reportar
+  durante ela usa o primeiro da semana.
+- Semana sem nenhum reporte **não gera post**. Um canal que recebe "ninguém jogou"
+  toda segunda vira ruído que as pessoas passam a ignorar.
+- Quedas aparecem, em vermelho. Esconder tornaria o ranking propaganda.
 
 ## Assistente de draft
 

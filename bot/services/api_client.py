@@ -25,6 +25,7 @@ from bot.services.schemas import (
     Patch,
     PlayerProgress,
     TeamProgress,
+    WeeklyRanking,
 )
 
 logger = get_logger(__name__)
@@ -216,6 +217,27 @@ class MLBBApiClient:
             response.raise_for_status()
         except httpx.HTTPError as exc:
             logger.error("falha ao confirmar publicacao", extra={"error": str(exc)})
+            raise BackendUnavailableError(str(exc)) from exc
+
+    async def get_pending_weekly_ranking(self) -> WeeklyRanking | None:
+        """Ranking semanal ainda nao publicado, se houver."""
+        payload = await self._get("/api/v1/players/weekly-ranking/pending")
+        if payload is None:
+            return None
+        return WeeklyRanking.model_validate(payload)
+
+    async def ack_weekly_ranking(self, week_label: str) -> None:
+        """Confirma a publicacao, para a mesma semana nao sair duas vezes."""
+        if self._client is None:
+            await self.start()
+        assert self._client is not None
+        try:
+            resposta = await self._client.post(
+                "/api/v1/players/weekly-ranking/ack", json={"week_label": week_label}
+            )
+            resposta.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.error("falha ao confirmar ranking semanal", extra={"error": str(exc)})
             raise BackendUnavailableError(str(exc)) from exc
 
     async def health(self) -> dict[str, object]:

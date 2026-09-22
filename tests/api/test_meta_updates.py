@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.models import Hero, MetaAnnouncement, MetaSnapshot
+from app.models import Announcement, Hero, MetaSnapshot
 from app.models.enums import HeroRole, Lane, Tier
 from app.services.meta_update_service import MetaUpdateService
 
@@ -90,7 +90,7 @@ def test_mark_announced_e_idempotente(duas_coletas):
     servico = MetaUpdateService(duas_coletas)
     assert servico.mark_announced(DEPOIS, FONTE) is True
     assert servico.mark_announced(DEPOIS, FONTE) is False
-    assert duas_coletas.query(MetaAnnouncement).count() == 1
+    assert duas_coletas.query(Announcement).count() == 1
 
 
 def test_variacao_irrelevante_nao_vira_mensagem(db_session):
@@ -108,7 +108,7 @@ def test_variacao_irrelevante_nao_vira_mensagem(db_session):
     assert servico.pending_update() is None
     # E foi marcada como anunciada, para nao reprocessar a cada poll do bot.
     assert servico.pending_update() is None
-    assert db_session.query(MetaAnnouncement).count() == 1
+    assert db_session.query(Announcement).count() == 1
 
 
 # -- endpoints ----------------------------------------------------------

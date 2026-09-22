@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -59,3 +59,35 @@ class TeamProgress(BaseModel):
             "nao lidos do jogo. A interface precisa deixar isso claro."
         ),
     )
+
+
+class PlayerWeeklyDelta(BaseModel):
+    """Quanto um jogador andou na semana."""
+
+    display_name: str
+    discord_user_id: int
+    stars_start: int
+    stars_end: int
+    stars_gained: int
+    reports: int = Field(description="Quantas vezes reportou na semana.")
+    reached: bool = False
+    crossed_goal: bool = Field(
+        default=False, description="Cruzou a meta justamente nesta semana."
+    )
+
+
+class WeeklyRanking(BaseModel):
+    """Resumo da semana fechada."""
+
+    week_label: str = Field(description="Ano e semana ISO, ex.: 2026-W38.")
+    week_start: date
+    week_end: date
+    goal: int
+    movers: list[PlayerWeeklyDelta] = Field(default_factory=list)
+    team_stars_gained: int = 0
+    players_reported: int = 0
+    self_reported: bool = True
+
+
+class WeeklyRankingAck(BaseModel):
+    week_label: str

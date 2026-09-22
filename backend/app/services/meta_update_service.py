@@ -11,14 +11,14 @@ O fluxo da Fase 2 e:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
-from app.models.meta_announcement import MetaAnnouncement
+from app.models.announcement import AnnouncementKind
 from app.providers.factory import get_provider
+from app.repositories.announcement_repository import AnnouncementRepository
 from app.schemas.meta import MetaEntry, MetaUpdate
 from app.services.meta_service import MetaService
 
@@ -37,6 +37,7 @@ class MetaUpdateService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.meta = MetaService(db)
+        self.anuncios = AnnouncementRepository(db)
 
     # -- consulta -------------------------------------------------------
 
@@ -125,24 +126,22 @@ class MetaUpdateService:
 
     # -- estado de publicacao -------------------------------------------
 
+    @staticmethod
+    def _referencia(collected_at: datetime, source: str) -> str:
+        return f"{source}@{collected_at.isoformat()}"
+
     def _ja_anunciada(self, collected_at: datetime, source: str) -> bool:
-        stmt = select(MetaAnnouncement.id).where(
-            MetaAnnouncement.collected_at == collected_at,
-            MetaAnnouncement.source == source,
+        return self.anuncios.was_announced(
+            AnnouncementKind.META_UPDATE, self._referencia(collected_at, source)
         )
-        return self.db.scalar(stmt) is not None
 
     def mark_announced(self, collected_at: datetime, source: str) -> bool:
         """Marca a coleta como publicada. Idempotente."""
-        if self._ja_anunciada(collected_at, source):
-            return False
-        self.db.add(
-            MetaAnnouncement(
-                collected_at=collected_at,
-                source=source,
-                announced_at=datetime.now(UTC),
-            )
+        novo = self.anuncios.mark(
+            AnnouncementKind.META_UPDATE, self._referencia(collected_at, source)
         )
+        if not novo:
+            return False
         self.db.commit()
         logger.info(
             "coleta marcada como anunciada",

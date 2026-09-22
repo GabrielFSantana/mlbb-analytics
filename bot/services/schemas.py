@@ -178,3 +178,25 @@ class TeamProgress(ApiModel):
     team_stars_gained: int | None = None
     window_days: int = 7
     self_reported: bool = True
+
+
+class PlayerWeeklyDelta(ApiModel):
+    display_name: str
+    discord_user_id: int
+    stars_start: int
+    stars_end: int
+    stars_gained: int
+    reports: int = 0
+    reached: bool = False
+    crossed_goal: bool = False
+
+
+class WeeklyRanking(ApiModel):
+    week_label: str
+    week_start: date
+    week_end: date
+    goal: int
+    movers: list[PlayerWeeklyDelta] = []
+    team_stars_gained: int = 0
+    players_reported: int = 0
+    self_reported: bool = True

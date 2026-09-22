@@ -5,7 +5,8 @@ from app.services.meta_service import MetaService
 from app.services.meta_update_service import MetaUpdateService
 from app.services.player_service import PlayerService
 from app.services.sync_service import SyncResult, SyncService
+from app.services.weekly_ranking_service import WeeklyRankingService
 
 __all__ = ["BuildService", "DraftService", "HeroService", "MetaService",
     "MetaUpdateService",
-    "PlayerService", "SyncResult", "SyncService"]
+    "PlayerService", "SyncResult", "SyncService", "WeeklyRankingService"]

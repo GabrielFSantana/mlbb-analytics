@@ -31,6 +31,7 @@ from bot.services.schemas import (
     HeroDetail,
     MetaResponse,
     TeamProgress,
+    WeeklyRanking,
 )
 from bot.ui.embeds import (
     LANE_LABELS,
@@ -993,6 +994,131 @@ async def render_progress_card(dados: TeamProgress) -> bytes:
     return await asyncio.to_thread(_compor_progresso, dados)
 
 
+
+
+# ---------------------------------------------------------------------
+# Card do ranking semanal
+# ---------------------------------------------------------------------
+
+ALTURA_LINHA_RANKING = 52
+
+# Medalhas desenhadas, e nao emoji: a DejaVu (a fonte do container) nao tem
+# glifo colorido, e o emoji saia como quadrado vazio.
+CORES_POSICAO: dict[int, tuple[int, int, int]] = {
+    0: (255, 206, 84),   # ouro
+    1: (192, 198, 210),  # prata
+    2: (205, 127, 80),   # bronze
+}
+DIAMETRO_MEDALHA = 28
+
+
+def _compor_ranking(dados: WeeklyRanking) -> bytes:
+    fonte_titulo = _carregar_fonte(FONTES_NEGRITO, 30)
+    fonte_sub = _carregar_fonte(FONTES_REGULARES, 14)
+    fonte_pos = _carregar_fonte(FONTES_NEGRITO, 18)
+    fonte_nome = _carregar_fonte(FONTES_NEGRITO, 17)
+    fonte_detalhe = _carregar_fonte(FONTES_REGULARES, 12)
+    fonte_ganho = _carregar_fonte(FONTES_NEGRITO, 22)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 12)
+
+    altura = MARGEM + 108 + max(1, len(dados.movers)) * ALTURA_LINHA_RANKING + 20 + 38 + MARGEM
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+
+    x0 = MARGEM + 26
+    desenho.text((x0, MARGEM + 22), "RANKING DA SEMANA", font=fonte_titulo, fill=COR_TEXTO)
+
+    periodo = f"{dados.week_start.strftime('%d/%m')} a {dados.week_end.strftime('%d/%m')}"
+    sinal = "+" if dados.team_stars_gained >= 0 else ""
+    resumo = [
+        periodo,
+        f"{dados.players_reported} reportaram",
+        f"time: {sinal}{dados.team_stars_gained} estrelas",
+    ]
+    desenho.text((x0, MARGEM + 62), " · ".join(resumo), font=fonte_sub, fill=COR_TEXTO_FRACO)
+
+    y = MARGEM + 108
+    if not dados.movers:
+        desenho.text(
+            (x0, y + 8),
+            "Ninguem reportou estrelas nesta semana.",
+            font=fonte_sub,
+            fill=COR_TEXTO_FRACO,
+        )
+
+    for posicao, jogador in enumerate(dados.movers):
+        cor_medalha = CORES_POSICAO.get(posicao)
+        numero = str(posicao + 1)
+        cx, cy = x0, y + 4
+        if cor_medalha:
+            desenho.ellipse(
+                (cx, cy, cx + DIAMETRO_MEDALHA, cy + DIAMETRO_MEDALHA), fill=cor_medalha
+            )
+            cor_numero = (20, 22, 28)
+        else:
+            desenho.ellipse(
+                (cx, cy, cx + DIAMETRO_MEDALHA, cy + DIAMETRO_MEDALHA),
+                outline=COR_BORDA,
+                width=2,
+            )
+            cor_numero = COR_TEXTO_FRACO
+        caixa = desenho.textbbox((0, 0), numero, font=fonte_pos)
+        desenho.text(
+            (
+                cx + DIAMETRO_MEDALHA / 2 - (caixa[2] - caixa[0]) / 2,
+                cy + DIAMETRO_MEDALHA / 2 - (caixa[3] - caixa[1]) / 2 - 2,
+            ),
+            numero,
+            font=fonte_pos,
+            fill=cor_numero,
+        )
+        desenho.text((x0 + 44, y), jogador.display_name, font=fonte_nome, fill=COR_TEXTO)
+
+        detalhes = [f"{jogador.stars_start} → {jogador.stars_end}"]
+        if jogador.reports:
+            detalhes.append(f"{jogador.reports} reporte(s)")
+        if jogador.crossed_goal:
+            detalhes.append("BATEU A META NESTA SEMANA")
+        elif jogador.reached:
+            detalhes.append("acima da meta")
+        desenho.text(
+            (x0 + 44, y + 22),
+            " · ".join(detalhes),
+            font=fonte_detalhe,
+            fill=COR_TEXTO_FRACO,
+        )
+
+        # Ganho a direita, verde quando sobe e vermelho quando cai. Perder
+        # estrela aparece: esconder tornaria o ranking propaganda.
+        ganho = f"{'+' if jogador.stars_gained >= 0 else ''}{jogador.stars_gained}"
+        cor = COR_FORTE if jogador.stars_gained > 0 else (
+            COR_FRACO if jogador.stars_gained < 0 else COR_TEXTO_FRACO
+        )
+        largura = fonte_ganho.getlength(ganho)
+        desenho.text((LARGURA - MARGEM - 30 - largura, y + 6), ganho, font=fonte_ganho, fill=cor)
+
+        y += ALTURA_LINHA_RANKING
+
+    desenho.text(
+        (x0, altura - MARGEM - 26),
+        "Numeros informados pelos proprios jogadores — nao sao lidos do jogo.",
+        font=fonte_rodape,
+        fill=COR_TEXTO_FRACO,
+    )
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_weekly_ranking_card(dados: WeeklyRanking) -> bytes:
+    """Gera o PNG do ranking semanal."""
+    return await asyncio.to_thread(_compor_ranking, dados)
+
+
 __all__ = [
     "LANE_LABELS",
     "render_build_card",
@@ -1001,4 +1127,5 @@ __all__ = [
     "render_hero_card",
     "render_meta_card",
     "render_progress_card",
+    "render_weekly_ranking_card",
 ]

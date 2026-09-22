@@ -18,6 +18,7 @@ from bot.services.schemas import (
     HeroDetail,
     MetaResponse,
     TeamProgress,
+    WeeklyRanking,
 )
 from bot.ui import cards
 
@@ -474,3 +475,64 @@ async def test_progresso_card_cresce_com_o_time():
     )
     assert poucos is not None and muitos is not None
     assert Image.open(io.BytesIO(muitos)).height > Image.open(io.BytesIO(poucos)).height
+
+
+# -- card do ranking semanal --------------------------------------------
+
+
+def mover(nome: str, ganho: int, **extras: object) -> dict:
+    base = {
+        "display_name": nome,
+        "discord_user_id": abs(hash(nome)) % 10000,
+        "stars_start": 100,
+        "stars_end": 100 + ganho,
+        "stars_gained": ganho,
+        "reports": 3,
+        "reached": False,
+        "crossed_goal": False,
+    }
+    base.update(extras)
+    return base
+
+
+def ranking(**overrides: object) -> WeeklyRanking:
+    base: dict[str, object] = {
+        "week_label": "2026-W38",
+        "week_start": "2026-09-15",
+        "week_end": "2026-09-21",
+        "goal": 200,
+        "movers": [mover("A", 44, crossed_goal=True), mover("B", 22), mover("C", -12)],
+        "team_stars_gained": 54,
+        "players_reported": 3,
+        "self_reported": True,
+    }
+    base.update(overrides)
+    return WeeklyRanking.model_validate(base)
+
+
+async def test_ranking_card_gera_png():
+    dados = await cards.render_weekly_ranking_card(ranking())
+    assert dados is not None
+    assert Image.open(io.BytesIO(dados)).width == cards.LARGURA
+
+
+async def test_ranking_card_sem_movimentacao_ainda_renderiza():
+    dados = await cards.render_weekly_ranking_card(
+        ranking(movers=[], team_stars_gained=0, players_reported=0)
+    )
+    assert dados is not None
+
+
+async def test_ranking_card_cresce_com_os_jogadores():
+    poucos = await cards.render_weekly_ranking_card(ranking())
+    muitos = await cards.render_weekly_ranking_card(
+        ranking(movers=[mover(f"J{i}", i) for i in range(9)])
+    )
+    assert poucos is not None and muitos is not None
+    assert Image.open(io.BytesIO(muitos)).height > Image.open(io.BytesIO(poucos)).height
+
+
+def test_posicoes_do_podio_tem_cor_propria():
+    """Medalhas sao desenhadas: a fonte do container nao tem emoji colorido."""
+    assert set(cards.CORES_POSICAO) == {0, 1, 2}
+    assert len(set(cards.CORES_POSICAO.values())) == 3

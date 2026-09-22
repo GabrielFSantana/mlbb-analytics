@@ -13,6 +13,7 @@ from app.services.draft_service import DraftService
 from app.services.hero_service import HeroService
 from app.services.meta_service import MetaService
 from app.services.player_service import PlayerService
+from app.services.weekly_ranking_service import WeeklyRankingService
 
 DbSession = Annotated[Session, Depends(get_db)]
 
@@ -37,8 +38,15 @@ def get_player_service(db: DbSession) -> PlayerService:
     return PlayerService(db)
 
 
+def get_weekly_ranking_service(db: DbSession) -> WeeklyRankingService:
+    return WeeklyRankingService(db)
+
+
 BuildServiceDep = Annotated[BuildService, Depends(get_build_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
 HeroServiceDep = Annotated[HeroService, Depends(get_hero_service)]
 MetaServiceDep = Annotated[MetaService, Depends(get_meta_service)]
 PlayerServiceDep = Annotated[PlayerService, Depends(get_player_service)]
+WeeklyRankingServiceDep = Annotated[
+    WeeklyRankingService, Depends(get_weekly_ranking_service)
+]
