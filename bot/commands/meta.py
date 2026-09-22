@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import io
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from bot.core.logging import get_logger
 from bot.services.api_client import BackendError, BackendUnavailableError, MLBBApiClient
+from bot.ui.cards import render_meta_card
 from bot.ui.embeds import build_error_embed, build_meta_embed
 
 logger = get_logger(__name__)
+
+FORMAT_CHOICES = [
+    app_commands.Choice(name="Imagem", value="imagem"),
+    app_commands.Choice(name="Texto", value="texto"),
+]
 
 RANK_CHOICES = [
     app_commands.Choice(name="Todos os ranques", value="all"),
@@ -41,13 +49,15 @@ class MetaCog(commands.Cog):
     @app_commands.describe(
         lane="Lane especifica. Sem valor, mostra todas.",
         ranque="Faixa de ranque. Sem valor, usa o agregado geral.",
+        formato="Imagem (padrao) ou texto.",
     )
-    @app_commands.choices(lane=LANE_CHOICES, ranque=RANK_CHOICES)
+    @app_commands.choices(lane=LANE_CHOICES, ranque=RANK_CHOICES, formato=FORMAT_CHOICES)
     async def meta(
         self,
         interaction: discord.Interaction,
         lane: app_commands.Choice[str] | None = None,
         ranque: app_commands.Choice[str] | None = None,
+        formato: app_commands.Choice[str] | None = None,
     ) -> None:
         # A chamada ao backend pode passar dos 3s do limite do Discord.
         await interaction.response.defer()
@@ -73,6 +83,18 @@ class MetaCog(commands.Cog):
                 embed=build_error_embed("Erro ao buscar o meta", str(exc))
             )
             return
+
+        if (formato.value if formato else "imagem") == "imagem":
+            try:
+                png = await render_meta_card(data, lane=lane_value)
+            except Exception as exc:  # noqa: BLE001 - card e opcional
+                # Renderizacao nunca pode impedir a resposta: cai para texto.
+                logger.warning("falha ao renderizar o card", extra={"error": str(exc)})
+                png = None
+            if png:
+                nome = f"meta-{lane_value or 'geral'}.png"
+                await interaction.followup.send(file=discord.File(io.BytesIO(png), nome))
+                return
 
         await interaction.followup.send(embed=build_meta_embed(data, lane=lane_value))
 

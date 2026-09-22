@@ -262,7 +262,7 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | Comando | Status |
 |---|---|
 | `/meta` | ✅ Fase 1 — tier list de todas as lanes |
-| `/meta lane:<...> ranque:<...>` | ✅ — tier list por lane e por faixa de ranque |
+| `/meta lane:<...> ranque:<...> formato:<...>` | ✅ — tier list em **imagem** (padrão) ou texto |
 | `/hero <nome>` | ✅ Fase 3b — classe, win/pick/ban e posição no meta por lane |
 | `/counter <nome>` | ✅ Fase 3b — forte contra, fraco contra, combina com |
 | `/build <herói> [lane]` | ✅ Fase 3c — itens centrais, emblema e feitiço mais usados |
@@ -312,6 +312,23 @@ rate no período.
 > Ao escalar a API para mais de um worker, mova o agendador para um processo próprio —
 > senão cada worker terá o seu. A escrita é idempotente, então o efeito seria
 > desperdício de chamadas à fonte, não dado corrompido.
+
+## Cards em imagem
+
+O `/meta` responde com um PNG gerado na hora: tiers como faixas coloridas, retratos
+oficiais dos heróis (CDN da Moonton, pelas URLs que já guardamos) e cabeçalho com lane,
+ranque e patch. Uma tier list com trinta heróis vira parede de texto num embed; em
+imagem a leitura é imediata.
+
+`formato:Texto` volta ao embed. E a imagem **nunca** impede a resposta: se a
+renderização falhar — rede, fonte ausente, imagem corrompida — o comando cai para o
+embed sozinho. Herói sem retrato sai com um espaço reservado, não derruba o card.
+
+A renderização (Pillow, síncrona e pesada) roda fora do event loop, para não travar o
+bot enquanto desenha. Os retratos são baixados uma vez e ficam em cache no processo.
+
+> A imagem do bot instala `fonts-dejavu-core`: o Pillow não embarca nenhuma fonte TTF,
+> e sem ela o texto sairia no bitmap padrão.
 
 ## Meta por faixa de ranque
 

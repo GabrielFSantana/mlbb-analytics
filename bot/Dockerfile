@@ -6,6 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Fontes para a renderizacao dos cards (o Pillow nao embarca nenhuma TTF).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY bot/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
