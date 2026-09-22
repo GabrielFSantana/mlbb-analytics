@@ -118,13 +118,37 @@ class HeroBuild(ApiModel):
     pick_rate: float
     emblem: str | None = None
     battle_spell: str | None = None
+    talents: str | None = None
     items: list[BuildItem] = []
+
+
+class CommunityBuildItem(ApiModel):
+    name: str
+    image_url: str | None = None
+    position: int
+    builds: int
+    share: float
+    in_core: bool = False
+
+
+class CommunityBuild(ApiModel):
+    """Build de seis itens agregada dos guias de jogadores.
+
+    `share` e frequencia de citacao, nao taxa de vitoria. O card precisa
+    dizer isso com todas as letras.
+    """
+
+    items: list[CommunityBuildItem] = []
+    builds_considered: int = 0
+    patch: str | None = None
+    collected_at: datetime | None = None
 
 
 class HeroBuilds(ApiModel):
     hero: Hero
     lane: str | None = None
     builds: list[HeroBuild] = []
+    community: CommunityBuild | None = None
     collected_at: datetime | None = None
     source: str
     is_mock: bool = False

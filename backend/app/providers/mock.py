@@ -19,10 +19,12 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from app.core.logging import get_logger
+from app.domain.comunidade import MINIMO_DE_BUILDS, TAMANHO_DA_BUILD
 from app.domain.scoring import calculate_score, score_to_tier
 from app.models.enums import HeroRole, Lane, RankFilter, RelationType
 from app.providers.base import MLBBDataProvider
 from app.providers.schemas import (
+    CommunityGuideData,
     HeroBuildData,
     HeroData,
     HeroRelationData,
@@ -228,6 +230,7 @@ class MockDataProvider(MLBBDataProvider):
         itens = [item["external_id"] for item in data.get("items", [])]
         emblemas = data.get("emblems", [])
         feiticos = data.get("battle_spells", [])
+        talentos = data.get("talents", [])
         base = indices[hero_slug]
         coletado_em = datetime.fromisoformat(data["collected_at"])
 
@@ -246,11 +249,49 @@ class MockDataProvider(MLBBDataProvider):
                     ),
                     emblem=emblemas[deslocamento % len(emblemas)] if emblemas else None,
                     battle_spell=feiticos[deslocamento % len(feiticos)] if feiticos else None,
+                    talents=tuple(
+                        talentos[(deslocamento * 3 + i) % len(talentos)] for i in range(3)
+                    )
+                    if talentos
+                    else (),
                     rank_filter=rank_filter,
                     collected_at=coletado_em,
                 )
             )
         return builds
+
+    def get_community_guides(self, hero_slug: str) -> list[CommunityGuideData]:
+        """Guias ficticios, deterministas, com seis itens cada.
+
+        Existem para que o caminho da build completa tenha o mesmo
+        comportamento em desenvolvimento e em producao. Sao dados MOCK e a
+        resposta da API diz isso.
+        """
+        data = self._data
+        indices = {h["slug"]: i for i, h in enumerate(data["heroes"])}
+        if hero_slug not in indices:
+            return []
+
+        itens = [item["external_id"] for item in data.get("items", [])]
+        if len(itens) < TAMANHO_DA_BUILD:
+            return []
+
+        base = indices[hero_slug]
+        patch = data["patch"]
+        # Variamos so o final de cada conjunto: assim os primeiros itens
+        # aparecem em quase todos e a frequencia tem um vencedor claro,
+        # como acontece com dados reais.
+        return [
+            CommunityGuideData(
+                hero_slug=hero_slug,
+                item_ids=tuple(
+                    itens[(base + posicao + (guia if posicao >= 4 else 0)) % len(itens)]
+                    for posicao in range(TAMANHO_DA_BUILD)
+                ),
+                patch=patch,
+            )
+            for guia in range(MINIMO_DE_BUILDS + 3)
+        ]
 
     # -- patches --------------------------------------------------------
 

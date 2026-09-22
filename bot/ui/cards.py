@@ -603,25 +603,184 @@ async def render_counters_card(dados: HeroCounters) -> bytes | None:
 
 ICONE_ITEM = 62
 MAX_VARIANTES = 3
+PASSO_ITEM = ICONE_ITEM + 14
+
+# Cabecalho do bloco estatistico e do bloco da comunidade. Cores diferentes
+# porque sao dados de natureza diferente: um mede partidas, o outro conta
+# opinioes. Se parecessem a mesma secao, seriam lidos como a mesma coisa.
+COR_SECAO_NUCLEO = (255, 214, 82)
+COR_SECAO_COMUNIDADE = (98, 168, 220)
+
+ALTURA_VARIANTE = 22 + ICONE_ITEM + 18 + 18 + 12
+
+
+def _titulo_de_secao(
+    desenho: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    titulo: str,
+    subtitulo: str,
+    cor: tuple[int, int, int],
+) -> int:
+    """Barra colorida + titulo + linha de contexto. Devolve o proximo y."""
+    fonte_titulo = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_sub = _carregar_fonte(FONTES_REGULARES, 12)
+
+    desenho.rounded_rectangle((x, y + 2, x + 5, y + 16), 2, fill=cor)
+    desenho.text((x + 14, y), titulo, font=fonte_titulo, fill=cor)
+    desenho.text((x + 14, y + 20), subtitulo, font=fonte_sub, fill=COR_TEXTO_FRACO)
+    return y + 42
+
+
+def _icone_de_item(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    dados_icone: bytes | None,
+    x: int,
+    y: int,
+    mascara: Image.Image,
+) -> None:
+    icone = None
+    if dados_icone:
+        try:
+            icone = Image.open(io.BytesIO(dados_icone)).convert("RGBA")
+            icone = icone.resize((ICONE_ITEM, ICONE_ITEM), Image.LANCZOS)
+        except OSError:  # pragma: no cover - imagem corrompida
+            icone = None
+    if icone is not None:
+        imagem.paste(icone, (x, y), mascara)
+    else:
+        desenho.rounded_rectangle((x, y, x + ICONE_ITEM, y + ICONE_ITEM), 10, fill=COR_BORDA)
+
+
+def _nome_sob_o_icone(
+    desenho: ImageDraw.ImageDraw,
+    nome: str,
+    x: int,
+    y: int,
+    largura_maxima: int = ICONE_ITEM + 26,
+) -> None:
+    """Nome centralizado sob o icone.
+
+    A largura maxima e parametro porque o espaco disponivel muda: no bloco
+    estatistico a seta entre os itens abre mais 18px, na build completa os
+    icones ficam colados e o nome precisa caber no proprio passo - senao um
+    nome longo invade o vizinho.
+    """
+    fonte_item = _carregar_fonte(FONTES_REGULARES, 11)
+    texto = _encurtar(nome, fonte_item, largura_maxima)
+    largura = fonte_item.getlength(texto)
+    desenho.text((x + (ICONE_ITEM - largura) / 2, y), texto, font=fonte_item, fill=COR_TEXTO)
+
+
+def _bloco_de_variantes(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    variantes: list,
+    x0: int,
+    y: int,
+    imagens: dict[str, bytes],
+) -> int:
+    fonte_opcao = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_meta = _carregar_fonte(FONTES_REGULARES, 13)
+    fonte_seta = _carregar_fonte(FONTES_NEGRITO, 18)
+    fonte_extra = _carregar_fonte(FONTES_REGULARES, 12)
+    mascara = _mascara_arredondada(ICONE_ITEM, 10)
+
+    for indice, build in enumerate(variantes, start=1):
+        desenho.text((x0, y), f"OPCAO {indice}", font=fonte_opcao, fill=COR_TEXTO_FRACO)
+
+        resumo = f"{build.win_rate * 100:.2f}% WR · {build.pick_rate * 100:.2f}% de uso"
+        largura_resumo = fonte_meta.getlength(resumo)
+        desenho.text(
+            (LARGURA - MARGEM - 26 - largura_resumo, y), resumo, font=fonte_meta, fill=COR_TEXTO
+        )
+
+        x = x0
+        topo = y + 22
+        for posicao, item in enumerate(build.items):
+            if posicao:
+                desenho.text((x, topo + ICONE_ITEM / 2 - 12), "›", font=fonte_seta, fill=COR_BORDA)
+                x += 18
+            _icone_de_item(imagem, desenho, imagens.get(item.image_url or ""), x, topo, mascara)
+            _nome_sob_o_icone(desenho, item.name, x, topo + ICONE_ITEM + 4)
+            x += PASSO_ITEM
+
+        # Emblema, feitico e talentos embaixo, em linha propria. Na fonte
+        # atual e comum as tres opcoes terem os MESMOS itens e diferirem so
+        # nos talentos: sem esta linha elas ficam identicas na tela e o card
+        # parece quebrado.
+        extras = [p for p in (build.emblem, build.battle_spell, build.talents) if p]
+        if extras:
+            desenho.text(
+                (x0, topo + ICONE_ITEM + 22),
+                _encurtar(" · ".join(extras), fonte_extra, LARGURA - 2 * x0),
+                font=fonte_extra,
+                fill=COR_TEXTO_FRACO,
+            )
+        y += ALTURA_VARIANTE
+    return y
+
+
+def _bloco_da_comunidade(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    community,
+    x0: int,
+    y: int,
+    imagens: dict[str, bytes],
+) -> int:
+    fonte_share = _carregar_fonte(FONTES_NEGRITO, 12)
+    mascara = _mascara_arredondada(ICONE_ITEM, 10)
+
+    patch = f" no patch {community.patch}" if community.patch else ""
+    y = _titulo_de_secao(
+        desenho,
+        x0,
+        y,
+        "BUILD COMPLETA · GUIAS DA COMUNIDADE",
+        f"{community.builds_considered} builds escritas por jogadores{patch}",
+        COR_SECAO_COMUNIDADE,
+    )
+
+    x = x0
+    for item in community.items:
+        _icone_de_item(imagem, desenho, imagens.get(item.image_url or ""), x, y, mascara)
+        # Tracinho sob o icone quando a estatistica de partidas tambem lista
+        # o item: mostra onde as duas origens concordam.
+        if item.in_core:
+            desenho.rounded_rectangle(
+                (x + 12, y + ICONE_ITEM + 2, x + ICONE_ITEM - 12, y + ICONE_ITEM + 5),
+                2,
+                fill=COR_SECAO_NUCLEO,
+            )
+        _nome_sob_o_icone(desenho, item.name, x, y + ICONE_ITEM + 8, PASSO_ITEM - 8)
+        texto = f"{item.share * 100:.0f}%"
+        largura = fonte_share.getlength(texto)
+        desenho.text(
+            (x + (ICONE_ITEM - largura) / 2, y + ICONE_ITEM + 24),
+            texto,
+            font=fonte_share,
+            fill=COR_TEXTO_FRACO,
+        )
+        x += PASSO_ITEM
+    return y + ICONE_ITEM + 44
 
 
 def _compor_build(dados: HeroBuilds, imagens: dict[str, bytes]) -> bytes:
-    fonte_opcao = _carregar_fonte(FONTES_NEGRITO, 15)
-    fonte_item = _carregar_fonte(FONTES_REGULARES, 11)
-    fonte_meta = _carregar_fonte(FONTES_REGULARES, 13)
-    fonte_seta = _carregar_fonte(FONTES_NEGRITO, 18)
     fonte_nota = _carregar_fonte(FONTES_REGULARES, 12)
     fonte_rodape = _carregar_fonte(FONTES_REGULARES, 13)
 
     # Mais usadas primeiro: e a pergunta de quem digita /build.
     variantes = sorted(dados.builds, key=lambda b: b.pick_rate, reverse=True)[:MAX_VARIANTES]
-    altura_variante = 22 + ICONE_ITEM + 18 + 22
-    altura = (
-        MARGEM + 24 + RETRATO_CABECALHO + 26
-        + len(variantes) * altura_variante
-        + 34  # nota sobre itens centrais
-        + 46 + MARGEM
-    )
+    community = dados.community
+    tem_comunidade = bool(community and community.items)
+
+    altura = MARGEM + 24 + RETRATO_CABECALHO + 26
+    altura += 42 + len(variantes) * ALTURA_VARIANTE + 22
+    if tem_comunidade:
+        altura += 42 + ICONE_ITEM + 44 + 22
+    altura += 46 + MARGEM
 
     imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
     desenho = ImageDraw.Draw(imagem)
@@ -640,64 +799,38 @@ def _compor_build(dados: HeroBuilds, imagens: dict[str, bytes]) -> bytes:
     )
 
     x0 = MARGEM + 26
-    mascara = _mascara_arredondada(ICONE_ITEM, 10)
-    for indice, build in enumerate(variantes, start=1):
-        desenho.text((x0, y), f"OPCAO {indice}", font=fonte_opcao, fill=COR_TEXTO_FRACO)
+    y = _titulo_de_secao(
+        desenho,
+        x0,
+        y,
+        "NUCLEO · ESTATISTICA DE PARTIDAS",
+        "Taxa de vitoria medida em partidas reais",
+        COR_SECAO_NUCLEO,
+    )
+    y = _bloco_de_variantes(imagem, desenho, variantes, x0, y, imagens)
 
-        # Numeros a direita, alinhados com o titulo da opcao.
-        resumo = f"{build.win_rate * 100:.2f}% WR · {build.pick_rate * 100:.2f}% de uso"
-        largura_resumo = fonte_meta.getlength(resumo)
-        desenho.text(
-            (LARGURA - MARGEM - 26 - largura_resumo, y), resumo, font=fonte_meta, fill=COR_TEXTO
-        )
-
-        x = x0
-        topo = y + 22
-        for posicao, item in enumerate(build.items):
-            if posicao:
-                desenho.text((x, topo + ICONE_ITEM / 2 - 12), "›", font=fonte_seta, fill=COR_BORDA)
-                x += 18
-            dados_icone = imagens.get(item.image_url or "")
-            icone = None
-            if dados_icone:
-                try:
-                    icone = Image.open(io.BytesIO(dados_icone)).convert("RGBA")
-                    icone = icone.resize((ICONE_ITEM, ICONE_ITEM), Image.LANCZOS)
-                except OSError:  # pragma: no cover - imagem corrompida
-                    icone = None
-            if icone is not None:
-                imagem.paste(icone, (x, topo), mascara)
-            else:
-                desenho.rounded_rectangle(
-                    (x, topo, x + ICONE_ITEM, topo + ICONE_ITEM), 10, fill=COR_BORDA
-                )
-            nome = _encurtar(item.name, fonte_item, ICONE_ITEM + 26)
-            largura_nome = fonte_item.getlength(nome)
-            desenho.text(
-                (x + (ICONE_ITEM - largura_nome) / 2, topo + ICONE_ITEM + 4),
-                nome,
-                font=fonte_item,
-                fill=COR_TEXTO,
-            )
-            x += ICONE_ITEM + 14
-
-        extras = [p for p in (build.emblem, build.battle_spell) if p]
-        if extras:
-            desenho.text(
-                (x + 16, topo + ICONE_ITEM / 2 - 8),
-                " · ".join(extras),
-                font=fonte_meta,
-                fill=COR_TEXTO_FRACO,
-            )
-        y += altura_variante
-
-    # A fonte publica so os itens centrais: dizer isso e parte do dado.
+    # A fonte estatistica publica so os itens centrais: dizer isso e parte
+    # do dado, nao rodape opcional.
     desenho.text(
         (x0, y),
-        "A fonte publica apenas os itens centrais, nao a build fechada de seis.",
+        "A estatistica cobre apenas os itens centrais, nao a build fechada de seis.",
         font=fonte_nota,
         fill=COR_TEXTO_FRACO,
     )
+    y += 22
+
+    if tem_comunidade:
+        y = _bloco_da_comunidade(imagem, desenho, community, x0, y, imagens)
+        # Sem esta frase, "86%" seria lido como taxa de vitoria.
+        desenho.text(
+            (x0, y),
+            "Frequencia de citacao entre esses guias, NAO taxa de vitoria. "
+            "Agregado por heroi, nao por lane. Marca amarela: item que a "
+            "estatistica tambem lista.",
+            font=fonte_nota,
+            fill=COR_TEXTO_FRACO,
+        )
+        y += 22
 
     partes = [f"Fonte: {dados.source}"]
     if dados.collected_at:
@@ -721,10 +854,10 @@ async def render_build_card(dados: HeroBuilds) -> bytes | None:
         return None
     urls = [dados.hero.image_url] if dados.hero.image_url else []
     urls += [item.image_url for build in dados.builds for item in build.items if item.image_url]
+    if dados.community:
+        urls += [item.image_url for item in dados.community.items if item.image_url]
     imagens = await _baixar_retratos(urls)
     return await asyncio.to_thread(_compor_build, dados, imagens)
-
-
 
 
 # ---------------------------------------------------------------------

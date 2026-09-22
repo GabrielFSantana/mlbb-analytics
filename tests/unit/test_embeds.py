@@ -370,3 +370,71 @@ def test_build_embed_avisa_dado_antigo_quando_fonte_esta_fora():
     embed = build_builds_embed(dados)
     observacao = next(f for f in embed.fields if f.name == "ℹ️ Observacao")
     assert "indisponivel" in (observacao.value or "")
+
+
+def _builds_com_comunidade(**overrides):
+    base = {
+        "hero": {"id": 1, "name": "Leomord", "slug": "leomord", "role": "fighter"},
+        "lane": "jungle",
+        "builds": [
+            {
+                "variant": 0,
+                "win_rate": 0.58,
+                "pick_rate": 0.16,
+                "emblem": "Assassin",
+                "battle_spell": "Retribution",
+                "talents": "Rupture · Weapons Master · Lethal Ignition",
+                "items": [{"name": "War Axe", "position": 0}],
+            }
+        ],
+        "community": {
+            "items": [
+                {
+                    "name": f"Item {i}",
+                    "position": i,
+                    "builds": 90 - i * 10,
+                    "share": (90 - i * 10) / 100,
+                    "in_core": i == 0,
+                }
+                for i in range(6)
+            ],
+            "builds_considered": 100,
+            "patch": "2.1.18",
+        },
+        "source": "rone_arena",
+        "is_mock": False,
+        "source_available": True,
+    }
+    base.update(overrides)
+    return HeroBuilds.model_validate(base)
+
+
+def test_build_embed_mostra_os_talentos():
+    """Sem eles, duas opcoes com os mesmos itens ficam iguais no texto."""
+    embed = build_builds_embed(_builds_com_comunidade())
+    opcao = next(f for f in embed.fields if f.name == "Opcao 1")
+    assert "Rupture" in (opcao.value or "")
+
+
+def test_build_embed_separa_a_build_da_comunidade():
+    embed = build_builds_embed(_builds_com_comunidade())
+    campo = next(f for f in embed.fields if "comunidade" in f.name)
+
+    assert campo.value is not None
+    assert campo.value.count("Item ") == 6
+
+
+def test_build_embed_diz_que_frequencia_nao_e_taxa_de_vitoria():
+    """O erro de leitura mais provavel do card: 90% parecer win rate."""
+    embed = build_builds_embed(_builds_com_comunidade())
+    campo = next(f for f in embed.fields if "comunidade" in f.name)
+
+    texto = (campo.value or "").lower()
+    assert "frequencia de citacao" in texto
+    assert "nao** taxa de vitoria" in texto
+    assert "100 builds" in texto
+
+
+def test_build_embed_sem_comunidade_nao_cria_o_campo():
+    embed = build_builds_embed(_builds_com_comunidade(community=None))
+    assert not [f for f in embed.fields if "comunidade" in f.name]

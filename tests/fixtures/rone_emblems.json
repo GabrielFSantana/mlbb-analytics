@@ -1,0 +1,294 @@
+{
+  "code": 0,
+  "message": "OK",
+  "data": {
+    "records": [
+      {
+        "data": {
+          "giftid": 1221,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61010,
+            "skillname": "Weapons Master",
+            "skilldesc": "Physical Attack and Magic Power gained from equipment, emblem, talents, and skil"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 1231,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62000,
+            "skillname": "Weakness Finder",
+            "skilldesc": "Basic Attacks slow enemies by 50% and reduce their Attack Speed by 30%.\n\n<font c"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 1211,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63040,
+            "skillname": "Fatal",
+            "skilldesc": "Gain 5% extra Crit Chance and 10% extra Crit Damage."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 831,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62320,
+            "skillname": "Focusing Mark",
+            "skilldesc": "Dealing damage to an enemy hero increases allied heroes' damage to them by 6% fo"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 811,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63060,
+            "skillname": "Agility",
+            "skilldesc": "Gain 4% extra Movement Speed."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 721,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61030,
+            "skillname": "Festival of Blood",
+            "skilldesc": "Gain 6% Spell Vamp. Each hero kill or assist grants an additional 0.5% Spell Vam"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 821,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61110,
+            "skillname": "Pull Yourself Together",
+            "skilldesc": "Cooldowns of Battle Spells and equipment's active skills are reduced by 15%."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 731,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62310,
+            "skillname": "Brave Smite",
+            "skilldesc": "Dealing skill damage to an enemy hero recovers 5% of Max HP.\n\n<font color=\"8098a"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 631,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62040,
+            "skillname": "Lethal Ignition",
+            "skilldesc": "Dealing damage greater than 7% of an enemy hero's Max HP 3 times within 5s will "
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 711,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63100,
+            "skillname": "Firmness",
+            "skilldesc": "Gain 6 extra Physical & Magic Defense."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 611,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63080,
+            "skillname": "Inspire",
+            "skilldesc": "Gain 5% extra Cooldown Reduction."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 621,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61100,
+            "skillname": "Bargain Hunter",
+            "skilldesc": "Equipment can be purchased at 95% of their base price."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 521,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 62030,
+            "skillname": "Master Assassin",
+            "skilldesc": "If there is only one enemy hero nearby, damage dealt to them is increased by 7%."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 531,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62090,
+            "skillname": "Killing Spree",
+            "skilldesc": "After killing an enemy hero, instantly recover 15% of Lost HP and gain 20% Movem"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 511,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63120,
+            "skillname": "Rupture",
+            "skilldesc": "Gain 5 <font color=\"ffdfa2\">Adaptive Penetration</font>.\n\n<font color=\"8098ab\">G"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 331,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62080,
+            "skillname": "Concussive Blast",
+            "skilldesc": "After the next Basic Attack, deal 100(+0.07 Total HP) Magic Damage to nearby ene"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 311,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63130,
+            "skillname": "Vitality",
+            "skilldesc": "Gain 225 extra Max HP."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 134,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62130,
+            "skillname": "Temporal Reign",
+            "skilldesc": "The next Ultimate cast decreases other active skills' remaining cooldowns by 1.5"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 132,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62300,
+            "skillname": "Quantum Charge",
+            "skilldesc": "Dealing damage with Basic Attacks increases Movement Speed by 30% for 1.5s and r"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 321,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61210,
+            "skillname": "Tenacity",
+            "skilldesc": "When HP is below 50%, Physical & Magic Defense are increased by 15."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 133,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62370,
+            "skillname": "War Cry",
+            "skilldesc": "After every 3 separate Basic Attacks or skills hit an enemy hero, all damage dea"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 131,
+          "gifttiers": 3,
+          "emblemskill": {
+            "skillid": 62330,
+            "skillname": "Impure Rage",
+            "skilldesc": "Dealing damage with skills deals 4% of target's Max HP as extra <font color=\"ffd"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 121,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61130,
+            "skillname": "Wilderness Blessing",
+            "skilldesc": "Movement Speed in the Jungle and River is increased by 10%. This bonus is halved"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 122,
+          "gifttiers": 2,
+          "emblemskill": {
+            "skillid": 61120,
+            "skillname": "Seasoned Hunter",
+            "skilldesc": "Damage against Lord and Turtle is increased by 15%. This bonus is halved against"
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 111,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63010,
+            "skillname": "Thrill",
+            "skilldesc": "Gain 16 <font color=\"ffdfa2\">Adaptive Attack</font>."
+          }
+        }
+      },
+      {
+        "data": {
+          "giftid": 112,
+          "gifttiers": 1,
+          "emblemskill": {
+            "skillid": 63020,
+            "skillname": "Swift",
+            "skilldesc": "Gain 10% extra Attack Speed."
+          }
+        }
+      }
+    ]
+  }
+}

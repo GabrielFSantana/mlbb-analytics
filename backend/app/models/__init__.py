@@ -5,6 +5,7 @@ Alembic precisa para o autogenerate.
 """
 
 from app.models.announcement import Announcement, AnnouncementKind
+from app.models.community_build import CommunityBuild, CommunityBuildItem
 from app.models.enums import TIER_ORDER, HeroRole, Lane, RankFilter, RelationType, Tier
 from app.models.hero import Hero
 from app.models.hero_build import HeroBuild, HeroBuildItem
@@ -19,6 +20,8 @@ __all__ = [
     "TIER_ORDER",
     "Announcement",
     "AnnouncementKind",
+    "CommunityBuild",
+    "CommunityBuildItem",
     "Hero",
     "HeroBuild",
     "HeroBuildItem",

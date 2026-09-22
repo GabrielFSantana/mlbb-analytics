@@ -84,8 +84,29 @@ class HeroBuildData(ProviderDTO):
     item_ids: tuple[int, ...] = ()
     emblem: str | None = None
     battle_spell: str | None = None
+    talents: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Talentos do emblema, ja com nome. Na fonte atual e o unico campo "
+            "que difere entre variantes com os mesmos itens: sem ele, duas "
+            "opcoes distintas ficam indistinguiveis na tela."
+        ),
+    )
     rank_filter: RankFilter = RankFilter.ALL
     collected_at: datetime
+
+
+class CommunityGuideData(ProviderDTO):
+    """Um conjunto de itens tirado de um guia escrito por jogador.
+
+    E materia-prima, nao recomendacao: um guia sozinho e a opiniao de uma
+    pessoa. Quem transforma varios deles em frequencia e
+    `app.domain.comunidade`.
+    """
+
+    hero_slug: str
+    item_ids: tuple[int, ...] = ()
+    patch: str | None = None
 
 
 class PatchData(ProviderDTO):

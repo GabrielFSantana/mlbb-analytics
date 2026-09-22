@@ -50,6 +50,12 @@ class HeroBuild(Base, TimestampMixin):
     pick_rate: Mapped[float] = mapped_column(Float, nullable=False)
     emblem: Mapped[str | None] = mapped_column(String(80), nullable=True)
     battle_spell: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    #: Talentos do emblema, ja resolvidos para nome e separados por " · ".
+    #: Guardamos o texto pronto, como ja fazemos com `emblem` e
+    #: `battle_spell`: sao rotulos para exibir, e nao entidades sobre as
+    #: quais facamos consulta. Na fonte atual e o unico campo que distingue
+    #: variantes com os mesmos itens.
+    talents: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="unknown")
     collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

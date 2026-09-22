@@ -851,5 +851,16 @@
     "Purify",
     "Execute",
     "Sprint"
+  ],
+  "talents": [
+    "Rupture",
+    "Weapons Master",
+    "Lethal Ignition",
+    "Impure Rage",
+    "Wilderness Blessing",
+    "Quantum Charge",
+    "Festival of Blood",
+    "Tenacity",
+    "Concussive Blast"
   ]
 }

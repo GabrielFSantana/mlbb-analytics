@@ -21,10 +21,18 @@ from app.providers.rone_arena import RoneArenaProvider, slugify
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 
+#: Heroi usado nas fixtures de build e de guias. Precisa existir em
+#: `rone_positions.json`, porque o provider resolve slug -> id por la.
+HEROI_FIXTURE = 133
+SLUG_FIXTURE = "hirara"
+
 ROTAS = {
     "/api/heroes/positions": "rone_positions.json",
     "/api/heroes/rank": "rone_rank.json",
     "/api/academy/meta/version": "rone_meta_version.json",
+    "/api/academy/emblems": "rone_emblems.json",
+    f"/api/academy/heroes/{HEROI_FIXTURE}/builds": "rone_builds.json",
+    f"/api/academy/heroes/{HEROI_FIXTURE}/recommended": "rone_recommended.json",
 }
 
 
@@ -253,3 +261,95 @@ def test_cache_evita_repetir_a_mesma_chamada():
 
     # Duas chamadas identicas devem consumir o cache, nao a rede.
     assert chamadas.count("/api/heroes/positions") == 1
+
+
+# -- builds e talentos --------------------------------------------------
+
+
+def test_build_traz_os_itens_centrais_da_fonte(provider: RoneArenaProvider):
+    builds = provider.get_hero_builds(SLUG_FIXTURE, Lane.MID)
+
+    assert builds
+    # A fonte publica tres itens por variante, nunca a build fechada de
+    # seis. Se isso mudar, queremos descobrir aqui e nao no card.
+    assert all(len(b.item_ids) == 3 for b in builds)
+    assert builds[0].variant == 0
+
+
+def test_variantes_diferem_nos_talentos(provider: RoneArenaProvider):
+    """O caso que motivou o campo: mesmos itens, opcoes distintas.
+
+    Sem os talentos, as tres opcoes sairiam identicas na tela e o comando
+    pareceria quebrado.
+    """
+    builds = provider.get_hero_builds(SLUG_FIXTURE, Lane.MID)
+
+    itens = {b.item_ids for b in builds}
+    talentos = {b.talents for b in builds}
+
+    assert len(itens) == 1, "a fixture real tem os mesmos itens nas tres variantes"
+    assert len(talentos) == len(builds)
+    assert all(b.talents for b in builds)
+
+
+def test_talentos_sao_resolvidos_para_nome(provider: RoneArenaProvider):
+    builds = provider.get_hero_builds(SLUG_FIXTURE, Lane.MID)
+    assert "Rupture" in builds[0].talents
+
+
+def test_build_sem_tabela_de_talentos_ainda_vale():
+    """Talento e adorno: falhar nele nao pode derrubar a build inteira."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/academy/emblems":
+            return httpx.Response(500, json={"code": 500, "message": "fora"})
+        return httpx.Response(200, json=_carregar(ROTAS[request.url.path]))
+
+    provider = RoneArenaProvider(client=httpx.Client(transport=httpx.MockTransport(handler)))
+    builds = provider.get_hero_builds(SLUG_FIXTURE, Lane.MID)
+
+    assert builds
+    assert builds[0].item_ids
+    assert builds[0].talents == ()
+
+
+def test_heroi_desconhecido_em_build_e_erro(provider: RoneArenaProvider):
+    with pytest.raises(ProviderError, match="nao existe na fonte"):
+        provider.get_hero_builds("heroi-que-nao-existe", Lane.MID)
+
+
+# -- guias da comunidade ------------------------------------------------
+
+
+def test_guias_trazem_os_conjuntos_de_itens(provider: RoneArenaProvider):
+    guias = provider.get_community_guides(SLUG_FIXTURE)
+
+    assert guias
+    # Aqui sim ha build fechada: e por isso que o comando consulta os guias.
+    assert any(len(g.item_ids) == 6 for g in guias)
+    assert all(g.hero_slug == SLUG_FIXTURE for g in guias)
+
+
+def test_um_guia_com_varios_conjuntos_vira_varias_builds(provider: RoneArenaProvider):
+    """Um guia pode trazer "vs tanque" e "vs squishy"; cada um conta."""
+    payload = _carregar("rone_recommended.json")
+    conjuntos = sum(
+        len(r["data"]["data"].get("equips") or []) for r in payload["data"]["records"]
+    )
+    guias = provider.get_community_guides(SLUG_FIXTURE)
+
+    # Menos ou igual: conjuntos totalmente em branco sao descartados.
+    assert 0 < len(guias) <= conjuntos
+    assert len(guias) >= len(payload["data"]["records"])
+
+
+def test_guia_carrega_o_patch_para_o_filtro(provider: RoneArenaProvider):
+    """Sem o patch nao da para descartar guia de um jogo que mudou."""
+    guias = provider.get_community_guides(SLUG_FIXTURE)
+    assert any(g.patch for g in guias)
+
+
+def test_posicoes_em_branco_nao_viram_item(provider: RoneArenaProvider):
+    """A fonte devolve [null, null, ...] em guia mal preenchido."""
+    guias = provider.get_community_guides(SLUG_FIXTURE)
+    assert all(all(i for i in g.item_ids) for g in guias)

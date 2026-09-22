@@ -271,7 +271,7 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | `/meta lane:<...> ranque:<...> formato:<...>` | ✅ — tier list em **imagem** (padrão) ou texto |
 | `/hero <nome> [ranque] [formato]` | ✅ — ficha em **imagem** (padrão) ou texto |
 | `/counter <nome> [formato]` | ✅ — forte contra, fraco contra, combina com, em **imagem** |
-| `/build <herói> [lane] [formato]` | ✅ — itens centrais com ícones, emblema e feitiço, em **imagem** |
+| `/build <herói> [lane] [formato]` | ✅ — núcleo estatístico (itens centrais, emblema, feitiço, talentos) **e** build completa de seis agregada dos guias da comunidade, em **imagem** |
 | `/draft inimigos:<...> [aliados] [lane] [ranque]` | ✅ — sugere picks e explica o porquê, em **imagem** |
 | `/estrelas <n> [nota]` | ✅ — registra suas estrelas |
 | `/progresso [meta] [formato]` | ✅ — progresso do time rumo à meta, em **imagem** |
@@ -400,8 +400,9 @@ usam exatamente as mesmas faixas de referência do cálculo de score
 tier exibido ao lado. Há teste garantindo essa amarração.
 
 O card de **counters** separa em três faixas coloridas (forte contra, fraco contra,
-combina com), com os retratos lado a lado. O de **build** mostra os ícones dos itens em
-sequência, com emblema, feitiço e as taxas de vitória e uso de cada variante.
+combina com), com os retratos lado a lado. O de **build** tem dois blocos de cores
+distintas — núcleo estatístico e build completa da comunidade — justamente para que
+não sejam lidos como a mesma coisa.
 
 `formato:Texto` volta ao embed. E a imagem **nunca** impede a resposta: se a
 renderização falhar — rede, fonte ausente, imagem corrompida — o comando cai para o
@@ -447,9 +448,47 @@ e confundi-las faz o usuário procurar um problema onde não há.
 Sem lane informada, o comando usa aquela em que o herói está mais forte na coleta mais
 recente.
 
-> A fonte publica apenas os **itens centrais** (hoje três), não uma build fechada de
-> seis. O embed diz isso explicitamente — apresentar três itens como "a build" seria
-> enganoso.
+### Duas coisas diferentes chamadas "build"
+
+A fonte tem dois caminhos, e eles **medem coisas diferentes**. O card mostra os dois,
+em blocos separados, com a origem escrita em cada um:
+
+| Bloco | De onde vem | O que o número significa | Limitação |
+|---|---|---|---|
+| **Núcleo** | Partidas reais | Taxa de vitória e de uso | Só os **itens centrais** — hoje três, nunca a build de seis |
+| **Build completa** | Guias escritos por jogadores | **Frequência de citação** — em quantos guias o item aparece | Não tem taxa de vitória; agregada por herói, não por lane |
+
+O núcleo sozinho não responde "o que eu compro" — e chamar três itens de "a build"
+seria enganoso. Por isso o comando também agrega os guias da comunidade.
+
+Um guia isolado é a opinião de uma pessoa e não vale como recomendação. O que dá para
+afirmar com honestidade é a contagem: *"entre as 110 builds que a comunidade escreveu
+para Kagura no patch 2.1.18, Holy Crystal aparece em 86% delas"*. Isso é aritmética
+sobre dado observado, não palpite. A regra está em
+[`backend/app/domain/comunidade.py`](backend/app/domain/comunidade.py):
+
+- **Mínimo de 5 builds.** Abaixo disso a seção não aparece. Três guias mal preenchidos
+  com cara de estatística são piores que nenhuma informação.
+- **Só o patch atual.** Guia de patch antigo descreve um jogo que não existe mais.
+- **Mínimo de 4 itens por conjunto.** A fonte devolve posições em branco; isso é
+  rascunho, não build.
+- **Item repetido no mesmo guia conta uma vez.** Alguém digitou duas vezes; contar duas
+  inflaria a frequência daquele item.
+- **O denominador sempre aparece.** Sem ele, "86%" não diz se veio de 110 builds ou de 5.
+
+Itens que as duas origens confirmam levam uma marca amarela no card — é a informação
+mais forte que o comando tem.
+
+> **Frequência não é taxa de vitória.** O card diz isso com todas as letras, porque é
+> o erro de leitura mais provável: os dois blocos mostram porcentagem, e só um deles
+> mede desempenho.
+
+### Por que as opções pareciam iguais
+
+Na fonte, é comum as três variantes estatísticas de um herói terem **exatamente os
+mesmos itens** e diferirem só nos **talentos de emblema**. Sem exibir os talentos, as
+três opções saíam idênticas na tela e o comando parecia quebrado. Os talentos agora
+aparecem em cada opção — resolvidos para nome via `/api/academy/emblems`.
 
 ## Como o score do meta é calculado
 
@@ -490,6 +529,7 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 | 3 | Integração de fonte real de estatísticas | ✅ |
 | 3b | Comandos `/hero`, `/counter`, `/patch` | ✅ |
 | 3c | Comando `/build` | ✅ |
+| 3d | Build completa agregada dos guias da comunidade | ✅ |
 | 4 | Player Tracking auto-reportado (`/estrelas`, `/progresso`) | ✅ |
 | 4b | Leitura automática de perfil e partidas | 🚫 bloqueado por acesso |
 | 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |

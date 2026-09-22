@@ -1,0 +1,105 @@
+{
+  "code": 0,
+  "message": "OK",
+  "data": {
+    "records": [
+      {
+        "data": {
+          "heroid": 133,
+          "hero_name": "Hirara",
+          "real_road": 2,
+          "big_rank": "101",
+          "build": [
+            {
+              "equipid": [
+                3111,
+                3101,
+                3110
+              ],
+              "build_win_rate": 0.5815561988027725,
+              "build_pick_rate": 0.0191225248555827,
+              "new_rune_skill": [
+                511,
+                1221,
+                631
+              ],
+              "runeid": 20005,
+              "skillid": 20140,
+              "emblem": {
+                "data": {
+                  "emblemid": 20005,
+                  "emblemname": "Assassin"
+                }
+              },
+              "battleskill": {
+                "data": {
+                  "__data": {
+                    "skillname": "Flameshot"
+                  }
+                }
+              }
+            },
+            {
+              "equipid": [
+                3111,
+                3101,
+                3110
+              ],
+              "build_win_rate": 0.5697765116831146,
+              "build_pick_rate": 0.0333096579877462,
+              "new_rune_skill": [
+                511,
+                1221,
+                131
+              ],
+              "runeid": 20005,
+              "skillid": 20140,
+              "emblem": {
+                "data": {
+                  "emblemid": 20005,
+                  "emblemname": "Assassin"
+                }
+              },
+              "battleskill": {
+                "data": {
+                  "__data": {
+                    "skillname": "Flameshot"
+                  }
+                }
+              }
+            },
+            {
+              "equipid": [
+                3111,
+                3101,
+                3110
+              ],
+              "build_win_rate": 0.5467691081071286,
+              "build_pick_rate": 0.0181825712743219,
+              "new_rune_skill": [
+                511,
+                121,
+                131
+              ],
+              "runeid": 20005,
+              "skillid": 20140,
+              "emblem": {
+                "data": {
+                  "emblemid": 20005,
+                  "emblemname": "Assassin"
+                }
+              },
+              "battleskill": {
+                "data": {
+                  "__data": {
+                    "skillname": "Flameshot"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

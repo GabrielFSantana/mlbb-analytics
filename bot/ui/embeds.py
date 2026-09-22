@@ -412,6 +412,9 @@ def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
             extras.append(f"Emblema: {build.emblem}")
         if build.battle_spell:
             extras.append(f"Feitico: {build.battle_spell}")
+        if build.talents:
+            # Muitas vezes e o UNICO campo que difere entre as opcoes.
+            extras.append(f"Talentos: {build.talents}")
         if extras:
             detalhes.append(" · ".join(extras))
         detalhes.append(
@@ -419,9 +422,28 @@ def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
         )
         embed.add_field(name=f"Opcao {posicao}", value="\n".join(detalhes), inline=False)
 
+    if dados.community and dados.community.items:
+        # Bloco separado e com origem escrita: aqui NAO existe taxa de
+        # vitoria, e "86%" significa "aparece em 86% dos guias".
+        linhas = [
+            f"{item.name} — {item.share * 100:.0f}%" + (" ⭐" if item.in_core else "")
+            for item in dados.community.items
+        ]
+        patch = f" no patch {dados.community.patch}" if dados.community.patch else ""
+        linhas.append(
+            f"\n_Frequencia de citacao em {dados.community.builds_considered} builds "
+            f"escritas por jogadores{patch} — **nao** taxa de vitoria. Agregado por "
+            f"heroi, nao por lane. ⭐ = item que a estatistica tambem lista._"
+        )
+        embed.add_field(
+            name="🧩 Build completa (guias da comunidade)",
+            value="\n".join(linhas),
+            inline=False,
+        )
+
     observacoes = [
-        "A fonte publica apenas os **itens centrais**, nao a build fechada de "
-        "seis. Complete conforme a partida."
+        "A estatistica acima cobre apenas os **itens centrais**, nao a build "
+        "fechada de seis."
     ]
     if not dados.source_available:
         observacoes.append(

@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.community_build import CommunityBuild, CommunityBuildItem
 from app.models.enums import Lane, RankFilter
 from app.models.hero_build import HeroBuild, HeroBuildItem
 from app.models.item import Item
@@ -114,3 +115,36 @@ class HeroBuildRepository:
         )
         self.db.add_all(builds)
         return len(builds)
+
+
+class CommunityBuildRepository:
+    """Leitura e escrita da build agregada dos guias da comunidade."""
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def get_for_hero(self, hero_id: int) -> CommunityBuild | None:
+        stmt = (
+            select(CommunityBuild)
+            .where(CommunityBuild.hero_id == hero_id)
+            .options(
+                selectinload(CommunityBuild.items).selectinload(CommunityBuildItem.item)
+            )
+        )
+        return self.db.scalar(stmt)
+
+    def replace_for_hero(self, hero_id: int, build: CommunityBuild) -> None:
+        """Troca a agregacao do heroi pela nova.
+
+        Uma agregacao sem itens e um resultado valido - significa "fomos la e
+        nao havia material suficiente" - e precisa ser gravada assim mesmo.
+        Se apagassemos a linha, o cache nunca valeria para esses herois e
+        toda consulta repetiria a chamada mais cara da fonte.
+        """
+        self.db.execute(delete(CommunityBuild).where(CommunityBuild.hero_id == hero_id))
+        self.db.add(build)
+
+    def last_refreshed_at(self, hero_id: int) -> datetime | None:
+        """Quando NOS agregamos os guias deste heroi pela ultima vez."""
+        stmt = select(CommunityBuild.created_at).where(CommunityBuild.hero_id == hero_id)
+        return self.db.scalar(stmt)

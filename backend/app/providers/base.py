@@ -28,6 +28,7 @@ from typing import ClassVar
 from app.core.exceptions import ProviderNotSupportedError
 from app.models.enums import Lane, RankFilter
 from app.providers.schemas import (
+    CommunityGuideData,
     HeroBuildData,
     HeroData,
     HeroRelationData,
@@ -101,6 +102,16 @@ class MLBBDataProvider(ABC):
         centenas de chamadas por coleta numa fonte sem rate limit documentado.
         """
         raise ProviderNotSupportedError(f"{self.name} nao fornece builds")
+
+    def get_community_guides(self, hero_slug: str) -> list[CommunityGuideData]:
+        """Conjuntos de itens tirados de guias escritos por jogadores. Opcional.
+
+        Serve para completar o que `get_hero_builds` nao cobre: a fonte
+        estatistica publica so os itens centrais. Devolve material bruto -
+        cada elemento e a opiniao de uma pessoa - e nao uma recomendacao.
+        Agregar e responsabilidade de `app.domain.comunidade`.
+        """
+        raise ProviderNotSupportedError(f"{self.name} nao fornece guias da comunidade")
 
     def current_patch(self) -> str:
         """Versao do jogo a que os dados desta fonte se referem."""

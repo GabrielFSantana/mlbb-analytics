@@ -356,6 +356,59 @@ async def test_build_card_item_sem_icone_nao_quebra():
     assert await cards.render_build_card(builds()) is not None
 
 
+def comunidade(**overrides: object) -> dict:
+    base: dict[str, object] = {
+        "items": [
+            {
+                "name": f"Item {i}",
+                "image_url": "https://cdn/sun.png",
+                "position": i,
+                "builds": 100 - i * 10,
+                "share": (100 - i * 10) / 100,
+                "in_core": i == 0,
+            }
+            for i in range(6)
+        ],
+        "builds_considered": 100,
+        "patch": "2.1.18",
+        "collected_at": datetime(2026, 9, 22, tzinfo=UTC),
+    }
+    base.update(overrides)
+    return base
+
+
+async def test_build_card_com_comunidade_e_mais_alto():
+    """A build completa e uma secao a mais, nao um rotulo no mesmo espaco."""
+    sem = await cards.render_build_card(builds())
+    com = await cards.render_build_card(builds(community=comunidade()))
+
+    assert sem is not None and com is not None
+    assert Image.open(io.BytesIO(com)).height > Image.open(io.BytesIO(sem)).height
+
+
+async def test_build_card_sem_itens_na_comunidade_nao_abre_a_secao():
+    """Amostra insuficiente nao pode virar uma secao vazia no card."""
+    sem = await cards.render_build_card(builds())
+    vazia = await cards.render_build_card(
+        builds(community=comunidade(items=[], builds_considered=2))
+    )
+
+    assert sem is not None and vazia is not None
+    assert Image.open(io.BytesIO(vazia)).height == Image.open(io.BytesIO(sem)).height
+
+
+async def test_build_card_com_talentos_nao_quebra():
+    variante = {**builds().builds[0].model_dump(), "talents": "Rupture · Weapons Master"}
+    dados = await cards.render_build_card(builds(builds=[variante]))
+    assert dados is not None
+
+
+async def test_build_card_com_comunidade_sem_icone_nao_quebra():
+    itens = [{**item, "image_url": None} for item in comunidade()["items"]]
+    dados = await cards.render_build_card(builds(community=comunidade(items=itens)))
+    assert dados is not None
+
+
 # -- card de draft ------------------------------------------------------
 
 

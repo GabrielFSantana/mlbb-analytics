@@ -43,6 +43,7 @@ from app.domain.scoring import calculate_score, score_to_tier
 from app.models.enums import HeroRole, Lane, RankFilter, RelationType
 from app.providers.base import MLBBDataProvider
 from app.providers.schemas import (
+    CommunityGuideData,
     HeroBuildData,
     HeroData,
     HeroRelationData,
@@ -79,6 +80,17 @@ VALID_WINDOWS: tuple[int, ...] = (1, 3, 7, 15, 30)
 # Quantos herois pedir por pagina. Hoje a fonte tem ~133; a folga evita
 # paginacao enquanto o elenco crescer.
 PAGE_SIZE = 300
+
+# Guias de jogador por heroi numa unica chamada. A fonte devolve do mais
+# novo para o mais antigo, e so nos interessam os do patch atual - que
+# portanto vem na frente. Medido em 22/09/2026 contra a fonte real, para
+# tres herois de volumes bem diferentes: subir de 120 para 200 nao trouxe
+# NENHUM guia adicional do patch corrente (Kagura 110 e 110, Clint 39 e 39,
+# Kalea 14 e 14), so payload. A latencia fica em ~3s em qualquer tamanho.
+#
+# Se algum heroi um dia passar de 120 guias no patch, contamos os mais
+# recentes - que e o vies certo - e o denominador exibido diz quantos foram.
+GUIDES_PAGE_SIZE = 120
 
 
 def slugify(name: str) -> str:
@@ -469,6 +481,7 @@ class RoneArenaProvider(MLBBDataProvider):
                         ),
                         emblem=self._nome_emblema(variante),
                         battle_spell=self._nome_feitico(variante),
+                        talents=self._nomes_dos_talentos(variante),
                         rank_filter=rank_filter,
                         collected_at=coletado_em,
                     )
@@ -490,6 +503,75 @@ class RoneArenaProvider(MLBBDataProvider):
     def _nome_feitico(variante: dict[str, Any]) -> str | None:
         dados = (variante.get("battleskill") or {}).get("data") or {}
         return ((dados.get("__data") or {}).get("skillname")) or None
+
+    def _talentos(self) -> dict[int, str]:
+        """Mapa id do talento -> nome, vindo de /api/academy/emblems.
+
+        Sao 26 talentos no jogo inteiro; cabem numa chamada so e mudam
+        junto com o patch, nao com o heroi consultado.
+        """
+        payload = self._get("/api/academy/emblems", size=100, index=1, lang="en")
+        tabela: dict[int, str] = {}
+        for registro in self._records(payload):
+            dados = registro.get("data") or registro
+            gift_id = dados.get("giftid")
+            nome = ((dados.get("emblemskill") or {}).get("skillname"))
+            if gift_id and nome:
+                tabela[int(gift_id)] = str(nome)
+        return tabela
+
+    def _nomes_dos_talentos(self, variante: dict[str, Any]) -> tuple[str, ...]:
+        """Resolve os ids de `new_rune_skill` para nome.
+
+        Se a tabela de talentos falhar, a build ainda vale: devolvemos vazio
+        em vez de derrubar a consulta inteira por causa de um adorno.
+        """
+        ids = [int(i) for i in (variante.get("new_rune_skill") or []) if i]
+        if not ids:
+            return ()
+        try:
+            tabela = self._talentos()
+        except ProviderError as exc:
+            logger.warning("nao consegui resolver talentos", extra={"error": str(exc)})
+            return ()
+        return tuple(nome for i in ids if (nome := tabela.get(i)))
+
+    def get_community_guides(self, hero_slug: str) -> list[CommunityGuideData]:
+        """Conjuntos de itens escritos por jogadores, um por bloco de equipamento.
+
+        Um guia pode trazer mais de um conjunto ("vs tanque", "vs squishy");
+        cada um conta como uma build separada, que e a unidade que faz
+        sentido contar.
+        """
+        hero_id = self._hero_id_por_slug(hero_slug)
+        if hero_id is None:
+            raise ProviderError(f"{self.name}: heroi '{hero_slug}' nao existe na fonte")
+
+        payload = self._get(
+            f"/api/academy/heroes/{hero_id}/recommended",
+            size=GUIDES_PAGE_SIZE,
+            index=1,
+            order="desc",
+            lang="en",
+        )
+
+        guias: list[CommunityGuideData] = []
+        for registro in self._records(payload):
+            # O envelope aninha duas vezes: registro.data.data e o guia.
+            guia = ((registro.get("data") or {}).get("data")) or {}
+            patch = guia.get("game_version")
+            for bloco in guia.get("equips") or []:
+                ids = tuple(int(i) for i in (bloco.get("equip_ids") or []) if i)
+                if not ids:
+                    continue
+                guias.append(
+                    CommunityGuideData(
+                        hero_slug=hero_slug,
+                        item_ids=ids,
+                        patch=str(patch) if patch else None,
+                    )
+                )
+        return guias
 
     def get_patches(self) -> list[PatchData]:
         payload = self._get("/api/academy/meta/version", lang="en")

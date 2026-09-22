@@ -1,0 +1,617 @@
+{
+  "code": 0,
+  "message": "OK",
+  "data": {
+    "total": 304,
+    "records": [
+      {
+        "createdAt": 1782528371910,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Finisher",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3101,
+                  3110,
+                  3102,
+                  3108
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1781251042224,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "average build",
+                "equip_ids": [
+                  3108,
+                  3110,
+                  3105,
+                  3111,
+                  3102,
+                  3102
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1781123641649,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "susstainable",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3105,
+                  3102,
+                  3101,
+                  3108
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1780587004889,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "TIRNITY MAGE ITEM",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3110,
+                  3101,
+                  3102,
+                  3102
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1779982479308,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "huh",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3101,
+                  3110,
+                  3108,
+                  2107
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1779909806013,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Взрывной урон ",
+                "equip_ids": [
+                  3111,
+                  3544,
+                  3105,
+                  3110,
+                  3102,
+                  3101
+                ]
+              },
+              {
+                "equip_title": "Чаще можно спамить ультой и урона хватае",
+                "equip_ids": [
+                  3544,
+                  2106,
+                  3110,
+                  3102,
+                  3108,
+                  3101
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1779633223020,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Kagura build ",
+                "equip_ids": [
+                  2304,
+                  2014,
+                  3111,
+                  3102,
+                  3110,
+                  3101
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1778557901738,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "burst item ",
+                "equip_ids": [
+                  3111,
+                  3110,
+                  3102,
+                  3101,
+                  3108,
+                  3105
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1777160362384,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Kagura set up",
+                "equip_ids": [
+                  2304,
+                  3105,
+                  2014,
+                  3101,
+                  3102,
+                  3108
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1776641439581,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Hasar 1",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3110,
+                  3108,
+                  3102,
+                  2107
+                ]
+              },
+              {
+                "equip_title": "Hasar 2",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3105,
+                  3110,
+                  3101,
+                  2107
+                ]
+              },
+              {
+                "equip_title": "Hasar 3",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  2014,
+                  3110,
+                  3101,
+                  3102
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1775699546606,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "One shot",
+                "equip_ids": [
+                  2304,
+                  2014,
+                  3111,
+                  3105,
+                  3110,
+                  3102
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1775184870846,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Umbrella Smash",
+                "equip_ids": [
+                  2304,
+                  2014,
+                  3110,
+                  3108,
+                  3101,
+                  3102
+                ]
+              },
+              {
+                "equip_title": "Umbrella Melting Power",
+                "equip_ids": [
+                  2304,
+                  3105,
+                  2112,
+                  3101,
+                  3102,
+                  2106
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1774867070525,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Burstt",
+                "equip_ids": [
+                  3572,
+                  3110,
+                  3108,
+                  2112,
+                  3110,
+                  3111
+                ]
+              },
+              {
+                "equip_title": "Strong burst",
+                "equip_ids": [
+                  3574,
+                  3111,
+                  3104,
+                  2014,
+                  3113,
+                  2106
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1774083054933,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Extremely high integration! ",
+                "equip_ids": [
+                  3111,
+                  3110,
+                  2304,
+                  3101,
+                  3102,
+                  2112
+                ]
+              },
+              {
+                "equip_title": "cooldown+ tankey keller ",
+                "equip_ids": [
+                  2303,
+                  2106,
+                  3103,
+                  3105,
+                  2112,
+                  2107
+                ]
+              },
+              {
+                "equip_title": "run run run and damage ",
+                "equip_ids": [
+                  2306,
+                  3113,
+                  3104,
+                  3101,
+                  3109,
+                  3102
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1773992224355,
+        "data": {
+          "data": {
+            "game_version": null,
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "For squishy heroes",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3102,
+                  3110,
+                  3108,
+                  3101
+                ]
+              },
+              {
+                "equip_title": "For tanky heroes",
+                "equip_ids": [
+                  2304,
+                  3105,
+                  3101,
+                  2112,
+                  3102,
+                  3108
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1773482067138,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Burst",
+                "equip_ids": [
+                  3544,
+                  3111,
+                  3110,
+                  3102,
+                  3108,
+                  3105
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1773467522301,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Burst damage",
+                "equip_ids": [
+                  3111,
+                  3110,
+                  3102,
+                  3101,
+                  3105,
+                  3108
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1773145800615,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "",
+                "equip_ids": [
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1772518930778,
+        "data": {
+          "data": {
+            "game_version": "2.1.18",
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "healer killer",
+                "equip_ids": [
+                  2304,
+                  3105,
+                  3101,
+                  3110,
+                  2014,
+                  3102
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "createdAt": 1772153559639,
+        "data": {
+          "data": {
+            "game_version": null,
+            "language": "en",
+            "hero": {
+              "hero_id": 133,
+              "hero_lane": "2"
+            },
+            "equips": [
+              {
+                "equip_title": "Kagura",
+                "equip_ids": [
+                  2304,
+                  3111,
+                  3110,
+                  3102,
+                  3101,
+                  2112
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
