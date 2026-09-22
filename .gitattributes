@@ -1,0 +1,20 @@
+# Normalizacao de fim de linha.
+#
+# O PDF do guia sobreviveu por deteccao automatica de binario do git, mas
+# isso depende da configuracao de cada maquina: com `core.autocrlf` ligado
+# em outro clone, um PDF tratado como texto sai corrompido. Aqui fica
+# explicito.
+
+* text=auto
+
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+
+# Scripts do PowerShell esperam CRLF.
+*.ps1 text eol=crlf
+# Tudo que roda dentro do container Linux precisa de LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
