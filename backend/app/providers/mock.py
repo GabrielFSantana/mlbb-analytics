@@ -23,9 +23,11 @@ from app.domain.scoring import calculate_score, score_to_tier
 from app.models.enums import HeroRole, Lane, RankFilter, RelationType
 from app.providers.base import MLBBDataProvider
 from app.providers.schemas import (
+    HeroBuildData,
     HeroData,
     HeroRelationData,
     HeroStatsData,
+    ItemData,
     MetaEntryData,
     PatchData,
 )
@@ -187,6 +189,56 @@ class MockDataProvider(MLBBDataProvider):
                         )
                     )
         return relacoes
+
+    # -- itens e builds -------------------------------------------------
+
+    def get_items(self) -> list[ItemData]:
+        return [ItemData(**item) for item in self._data.get("items", [])]
+
+    def get_hero_builds(
+        self,
+        hero_slug: str,
+        lane: Lane,
+        *,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> list[HeroBuildData]:
+        """Builds ficticias porem deterministas, derivadas do indice do heroi."""
+        data = self._data
+        herois = data["heroes"]
+        indices = {h["slug"]: i for i, h in enumerate(herois)}
+        if hero_slug not in indices:
+            return []
+
+        heroi = herois[indices[hero_slug]]
+        if lane.value not in heroi["lanes"]:
+            return []
+
+        itens = [item["external_id"] for item in data.get("items", [])]
+        emblemas = data.get("emblems", [])
+        feiticos = data.get("battle_spells", [])
+        base = indices[hero_slug]
+        coletado_em = datetime.fromisoformat(data["collected_at"])
+
+        builds: list[HeroBuildData] = []
+        for variante in range(3):
+            deslocamento = base + variante
+            builds.append(
+                HeroBuildData(
+                    hero_slug=hero_slug,
+                    lane=lane,
+                    variant=variante,
+                    win_rate=round(min(0.62, heroi["win_rate"] + variante * 0.01), 5),
+                    pick_rate=round(max(0.001, heroi["pick_rate"] / (variante + 1)), 5),
+                    item_ids=tuple(
+                        itens[(deslocamento + i) % len(itens)] for i in range(3)
+                    ),
+                    emblem=emblemas[deslocamento % len(emblemas)] if emblemas else None,
+                    battle_spell=feiticos[deslocamento % len(feiticos)] if feiticos else None,
+                    rank_filter=rank_filter,
+                    collected_at=coletado_em,
+                )
+            )
+        return builds
 
     # -- patches --------------------------------------------------------
 

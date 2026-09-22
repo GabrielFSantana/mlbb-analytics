@@ -102,3 +102,27 @@ class Patch(ApiModel):
     notes_url: str | None = None
     summary: str | None = None
     is_current: bool
+
+
+class BuildItem(ApiModel):
+    name: str
+    image_url: str | None = None
+    position: int
+
+
+class HeroBuild(ApiModel):
+    variant: int
+    win_rate: float
+    pick_rate: float
+    emblem: str | None = None
+    battle_spell: str | None = None
+    items: list[BuildItem] = []
+
+
+class HeroBuilds(ApiModel):
+    hero: Hero
+    lane: str | None = None
+    builds: list[HeroBuild] = []
+    collected_at: datetime | None = None
+    source: str
+    is_mock: bool = False

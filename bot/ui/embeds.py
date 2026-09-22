@@ -11,6 +11,7 @@ from datetime import datetime
 import discord
 
 from bot.services.schemas import (
+    HeroBuilds,
     HeroCounters,
     HeroDetail,
     MetaEntry,
@@ -351,4 +352,57 @@ def build_patch_embed(patch: Patch | None) -> discord.Embed:
     if patch.notes_url:
         embed.add_field(name="Notas", value=f"[Abrir]({patch.notes_url})", inline=True)
     embed.set_footer(text="Versao informada pela fonte de dados configurada.")
+    return embed
+
+
+def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
+    """Builds recomendadas de um heroi, ordenadas por uso."""
+    lane = LANE_LABELS.get(dados.lane or "", (dados.lane or "").upper())
+    titulo = f"🛠️ {dados.hero.name} — build" + (f" ({lane})" if lane else "")
+    embed = discord.Embed(
+        title=titulo,
+        colour=COLOR_MOCK if dados.is_mock else COLOR_HERO,
+        description=MOCK_WARNING if dados.is_mock else None,
+    )
+    if dados.hero.image_url:
+        embed.set_thumbnail(url=dados.hero.image_url)
+
+    if not dados.builds:
+        embed.description = (
+            f"{embed.description}\n\n" if embed.description else ""
+        ) + "A fonte nao publicou builds para este heroi nesta lane."
+        return embed
+
+    # Mais usadas primeiro: e a pergunta real de quem digita /build.
+    ordenadas = sorted(dados.builds, key=lambda b: b.pick_rate, reverse=True)
+    for posicao, build in enumerate(ordenadas[:3], start=1):
+        itens = " → ".join(item.name for item in build.items) or "sem itens"
+        detalhes = [f"**{itens}**"]
+        extras = []
+        if build.emblem:
+            extras.append(f"Emblema: {build.emblem}")
+        if build.battle_spell:
+            extras.append(f"Feitico: {build.battle_spell}")
+        if extras:
+            detalhes.append(" · ".join(extras))
+        detalhes.append(
+            f"🏆 {build.win_rate * 100:.2f}% WR · 🎯 {build.pick_rate * 100:.2f}% de uso"
+        )
+        embed.add_field(name=f"Opcao {posicao}", value="\n".join(detalhes), inline=False)
+
+    embed.add_field(
+        name="ℹ️ Observacao",
+        value=(
+            "A fonte publica apenas os **itens centrais**, nao a build fechada de "
+            "seis. Complete conforme a partida."
+        ),
+        inline=False,
+    )
+
+    rodape = [f"Fonte: {dados.source}"]
+    if dados.collected_at:
+        rodape.append(f"Coletado: {_format_timestamp(dados.collected_at)}")
+    if dados.is_mock:
+        rodape.append("DADOS MOCK")
+    embed.set_footer(text=" • ".join(rodape))
     return embed

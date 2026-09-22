@@ -9,6 +9,7 @@ from sqlalchemy import DateTime, Float, ForeignKey, Index, String, UniqueConstra
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
+from app.database.types import StrEnumType
 from app.models.enums import Lane, Tier
 
 if TYPE_CHECKING:
@@ -35,8 +36,8 @@ class MetaSnapshot(Base, TimestampMixin):
         ForeignKey("heroes.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    lane: Mapped[Lane] = mapped_column(String(20), nullable=False)
-    tier: Mapped[Tier] = mapped_column(String(5), nullable=False)
+    lane: Mapped[Lane] = mapped_column(StrEnumType(Lane, 20), nullable=False)
+    tier: Mapped[Tier] = mapped_column(StrEnumType(Tier, 5), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
 
     patch: Mapped[str] = mapped_column(String(20), nullable=False)

@@ -43,9 +43,11 @@ from app.domain.scoring import calculate_score, score_to_tier
 from app.models.enums import HeroRole, Lane, RankFilter, RelationType
 from app.providers.base import MLBBDataProvider
 from app.providers.schemas import (
+    HeroBuildData,
     HeroData,
     HeroRelationData,
     HeroStatsData,
+    ItemData,
     MetaEntryData,
     PatchData,
 )
@@ -408,6 +410,84 @@ class RoneArenaProvider(MLBBDataProvider):
                         )
                     )
         return relacoes
+
+    # -- itens e builds -------------------------------------------------
+
+    def get_items(self) -> list[ItemData]:
+        """Catalogo completo de itens (uma unica chamada)."""
+        payload = self._get("/api/academy/equipment", size=PAGE_SIZE * 2, index=1, lang="en")
+        itens: list[ItemData] = []
+        for registro in self._records(payload):
+            dados = registro.get("data") or registro
+            if not dados.get("equipid") or not dados.get("equipname"):
+                continue
+            itens.append(
+                ItemData(
+                    external_id=int(dados["equipid"]),
+                    name=str(dados["equipname"]),
+                    image_url=dados.get("equipicon"),
+                )
+            )
+        return itens
+
+    def get_hero_builds(
+        self,
+        hero_slug: str,
+        lane: Lane,
+        *,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> list[HeroBuildData]:
+        hero_id = self._hero_id_por_slug(hero_slug)
+        if hero_id is None:
+            raise ProviderError(f"{self.name}: heroi '{hero_slug}' nao existe na fonte")
+
+        payload = self._get(
+            f"/api/academy/heroes/{hero_id}/builds",
+            lane=lane.value,
+            rank=rank_filter.value,
+            size=20,
+            index=1,
+            lang="en",
+        )
+        coletado_em = self._collected_at()
+
+        builds: list[HeroBuildData] = []
+        for registro in self._records(payload):
+            dados = registro.get("data") or {}
+            for posicao, variante in enumerate(dados.get("build") or []):
+                builds.append(
+                    HeroBuildData(
+                        hero_slug=hero_slug,
+                        lane=lane,
+                        variant=posicao,
+                        win_rate=self._taxa(variante, "build_win_rate"),
+                        pick_rate=self._taxa(variante, "build_pick_rate"),
+                        item_ids=tuple(
+                            int(i) for i in (variante.get("equipid") or []) if i
+                        ),
+                        emblem=self._nome_emblema(variante),
+                        battle_spell=self._nome_feitico(variante),
+                        rank_filter=rank_filter,
+                        collected_at=coletado_em,
+                    )
+                )
+        return builds
+
+    def _hero_id_por_slug(self, hero_slug: str) -> int | None:
+        for hero_id, info in self._catalog().items():
+            if slugify(info["name"]) == hero_slug:
+                return hero_id
+        return None
+
+    @staticmethod
+    def _nome_emblema(variante: dict[str, Any]) -> str | None:
+        dados = (variante.get("emblem") or {}).get("data") or {}
+        return dados.get("emblemname")
+
+    @staticmethod
+    def _nome_feitico(variante: dict[str, Any]) -> str | None:
+        dados = (variante.get("battleskill") or {}).get("data") or {}
+        return ((dados.get("__data") or {}).get("skillname")) or None
 
     def get_patches(self) -> list[PatchData]:
         payload = self._get("/api/academy/meta/version", lang="en")

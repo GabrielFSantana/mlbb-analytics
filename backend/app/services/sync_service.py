@@ -22,6 +22,7 @@ from app.models.hero_stats import HeroStats
 from app.models.meta_snapshot import MetaSnapshot
 from app.providers.base import MLBBDataProvider
 from app.providers.factory import get_provider
+from app.repositories.build_repository import ItemRepository
 from app.repositories.hero_repository import HeroRepository
 from app.repositories.meta_repository import MetaRepository
 from app.repositories.patch_repository import PatchRepository
@@ -41,6 +42,7 @@ class SyncResult:
     meta_snapshots: int = 0
     patches: int = 0
     relations: int = 0
+    items: int = 0
     skipped: int = 0
     warnings: list[str] = field(default_factory=list)
 
@@ -52,6 +54,7 @@ class SyncResult:
             "meta_snapshots": self.meta_snapshots,
             "patches": self.patches,
             "relations": self.relations,
+            "items": self.items,
             "skipped": self.skipped,
             "warnings": self.warnings,
         }
@@ -66,6 +69,7 @@ class SyncService:
         self.meta = MetaRepository(db)
         self.patches = PatchRepository(db)
         self.relations = HeroRelationRepository(db)
+        self.items = ItemRepository(db)
 
     def sync_all(self, *, rank_filter: RankFilter = RankFilter.ALL) -> SyncResult:
         """Importa catalogo, patches, estatisticas e meta em uma transacao."""
@@ -79,6 +83,7 @@ class SyncService:
         self._sync_stats(result, index, rank_filter)
         self._sync_meta(result, index)
         self._sync_relations(result, index)
+        self._sync_items(result)
 
         self.db.commit()
         logger.info("sincronizacao concluida", extra=result.as_dict())
@@ -146,6 +151,22 @@ class SyncService:
                 )
             )
             result.stats += 1
+
+    def _sync_items(self, result: SyncResult) -> None:
+        """Catalogo de itens: uma chamada, necessaria para nomear as builds."""
+        try:
+            itens = self.provider.get_items()
+        except ProviderNotSupportedError:
+            result.warnings.append(f"{self.provider.name} nao fornece itens")
+            return
+        for item in itens:
+            self.items.upsert(
+                external_id=item.external_id,
+                name=item.name,
+                image_url=item.image_url,
+                source=self.provider.name,
+            )
+            result.items += 1
 
     def _sync_relations(self, result: SyncResult, index: dict[str, object]) -> None:
         try:

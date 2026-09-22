@@ -60,6 +60,33 @@ class HeroRelationData(ProviderDTO):
     relation_type: RelationType
 
 
+class ItemData(ProviderDTO):
+    """Um item do catalogo."""
+
+    external_id: int
+    name: str
+    image_url: str | None = None
+
+
+class HeroBuildData(ProviderDTO):
+    """Uma build recomendada para um heroi numa lane.
+
+    `item_ids` traz apenas os itens CENTRAIS que a fonte publica (hoje tres),
+    nao uma build fechada. A ordem e a da fonte.
+    """
+
+    hero_slug: str
+    lane: Lane
+    variant: int = Field(ge=0, description="Posicao da variante na resposta da fonte.")
+    win_rate: float = Field(ge=0.0, le=1.0)
+    pick_rate: float = Field(ge=0.0, le=1.0)
+    item_ids: tuple[int, ...] = ()
+    emblem: str | None = None
+    battle_spell: str | None = None
+    rank_filter: RankFilter = RankFilter.ALL
+    collected_at: datetime
+
+
 class PatchData(ProviderDTO):
     version: str
     released_at: date | None = None

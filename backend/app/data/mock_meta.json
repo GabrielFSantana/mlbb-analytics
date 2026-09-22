@@ -1,6 +1,6 @@
 {
   "_notice": "DADOS FICTICIOS. Win/pick/ban rates deste arquivo foram inventados para desenvolvimento e NAO representam o estado real do jogo. Nomes e classes dos herois sao reais; qualquer numero aqui nao e.",
-  "_schema": "win_rate/pick_rate/ban_rate sao fracoes (0.0-1.0), em faixas equivalentes as da fonte real. 'previous' e a leitura anterior, usada para exercitar o calculo de tendencia. 'relations' sao ficticias e deterministas.",
+  "_schema": "win_rate/pick_rate/ban_rate sao fracoes (0.0-1.0), em faixas equivalentes as da fonte real. 'previous' e a leitura anterior. 'relations', 'items' e as builds derivadas sao ficticias e deterministas.",
   "patch": "MOCK-0.1",
   "collected_at": "2026-09-15T00:00:00+00:00",
   "previous_collected_at": "2026-09-08T00:00:00+00:00",
@@ -802,5 +802,54 @@
       "summary": "Patch ficticio usado no ambiente de desenvolvimento.",
       "is_current": true
     }
+  ],
+  "items": [
+    {
+      "external_id": 9001,
+      "name": "Blade of Despair"
+    },
+    {
+      "external_id": 9002,
+      "name": "Endless Battle"
+    },
+    {
+      "external_id": 9003,
+      "name": "Berserker's Fury"
+    },
+    {
+      "external_id": 9004,
+      "name": "Warrior Boots"
+    },
+    {
+      "external_id": 9005,
+      "name": "Immortality"
+    },
+    {
+      "external_id": 9006,
+      "name": "Lightning Truncheon"
+    },
+    {
+      "external_id": 9007,
+      "name": "Clock of Destiny"
+    },
+    {
+      "external_id": 9008,
+      "name": "Antique Cuirass"
+    }
+  ],
+  "emblems": [
+    "Assassin",
+    "Fighter",
+    "Mage",
+    "Marksman",
+    "Support",
+    "Tank"
+  ],
+  "battle_spells": [
+    "Retribution",
+    "Flicker",
+    "Purify",
+    "Execute",
+    "Sprint"
   ]
 }

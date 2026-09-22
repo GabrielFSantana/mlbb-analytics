@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # sem congelar o dado entre execucoes.
     mlbb_api_cache_seconds: float = 300.0
 
+    # Builds sao buscadas sob demanda; este e o tempo que o resultado
+    # gravado continua valendo antes de consultar a fonte de novo.
+    builds_cache_hours: int = 24
+
     # --- Coleta automatica (Fase 2) -----------------------------------
     sync_enabled: bool = True
     # Horas (UTC) em que a coleta roda. A fonte agrega por dia, entao duas

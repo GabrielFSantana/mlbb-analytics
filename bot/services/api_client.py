@@ -16,6 +16,7 @@ import httpx
 from bot.core.config import settings
 from bot.core.logging import get_logger
 from bot.services.schemas import (
+    HeroBuilds,
     HeroCounters,
     HeroDetail,
     MetaResponse,
@@ -100,6 +101,14 @@ class MLBBApiClient:
         """Counters e sinergias de um heroi."""
         payload = await self._get(f"/api/v1/heroes/by-name/{quote(termo)}/counters")
         return HeroCounters.model_validate(payload)
+
+    async def get_hero_builds(self, termo: str, lane: str | None = None) -> HeroBuilds:
+        """Builds recomendadas de um heroi."""
+        params: dict[str, object] = {}
+        if lane:
+            params["lane"] = lane
+        payload = await self._get(f"/api/v1/builds/{quote(termo)}", **params)
+        return HeroBuilds.model_validate(payload)
 
     async def get_current_patch(self) -> Patch | None:
         payload = await self._get("/api/v1/patches/current")

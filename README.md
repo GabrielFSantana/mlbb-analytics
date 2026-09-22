@@ -228,6 +228,7 @@ deve ser commitado.
 | `MLBB_STATS_WINDOW_DAYS` | não | Janela agregada: 1, 3, 7, 15 ou 30 dias. Padrão 7. |
 | `MLBB_API_TIMEOUT` | não | Timeout das chamadas à fonte, em segundos. |
 | `MLBB_API_CACHE_SECONDS` | não | Cache curto, evita repetir chamadas na mesma coleta. |
+| `BUILDS_CACHE_HOURS` | não | Validade das builds gravadas antes de consultar a fonte. Padrão 24. |
 | `SYNC_ENABLED` | não | Liga a coleta automática. Padrão `true`. |
 | `SYNC_HOURS` | não | Horas UTC da coleta, separadas por vírgula. Padrão `6,18`. |
 | `SYNC_ON_STARTUP` | não | Coleta no boot se ainda não houve coleta hoje. |
@@ -245,6 +246,7 @@ deve ser commitado.
 | GET | `/api/v1/heroes/{id}` | Detalhe + estatística mais recente. |
 | GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug (usada pelo bot). |
 | GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
+| GET | `/api/v1/builds/{termo}` | Builds recomendadas. Aceita `lane` e `rank_filter`. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
 | GET | `/api/v1/meta` | Tier list de todas as lanes. |
 | GET | `/api/v1/meta/{lane}` | Tier list de uma lane (`jungle`, `gold`, `mid`, `exp`, `roam`). |
@@ -263,7 +265,7 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | `/meta lane:<jungle\|gold\|mid\|exp\|roam>` | ✅ Fase 1 |
 | `/hero <nome>` | ✅ Fase 3b — classe, win/pick/ban e posição no meta por lane |
 | `/counter <nome>` | ✅ Fase 3b — forte contra, fraco contra, combina com |
-| `/build <herói>` | ⏳ Fase 5 |
+| `/build <herói> [lane]` | ✅ Fase 3c — itens centrais, emblema e feitiço mais usados |
 | `/patch` | ✅ Fase 3b — patch vigente segundo a fonte |
 | `/player`, `/track`, `/compare` | ⏳ Fase 4 |
 
@@ -311,6 +313,24 @@ rate no período.
 > senão cada worker terá o seu. A escrita é idempotente, então o efeito seria
 > desperdício de chamadas à fonte, não dado corrompido.
 
+## Builds: coleta sob demanda
+
+Diferente do meta, as builds **não** entram na coleta diária. Buscar o elenco inteiro
+custaria uma requisição por herói e por lane — hoje passaria de 200 por execução, numa
+fonte comunitária sem rate limit documentado.
+
+Em vez disso, `/build <herói>` busca na hora, grava no banco e reaproveita o resultado
+por `BUILDS_CACHE_HOURS` (padrão 24h). Assim só gastamos requisição com heróis que as
+pessoas realmente consultam. Se a fonte estiver fora do ar, servimos o último dado
+conhecido com a data da coleta, em vez de devolver erro.
+
+Sem lane informada, o comando usa aquela em que o herói está mais forte na coleta mais
+recente.
+
+> A fonte publica apenas os **itens centrais** (hoje três), não uma build fechada de
+> seis. O embed diz isso explicitamente — apresentar três itens como "a build" seria
+> enganoso.
+
 ## Como o score do meta é calculado
 
 O `score` (0–100) e o `tier` (S+ … D) são uma **métrica interna deste projeto**, não
@@ -349,7 +369,7 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 | 2 | Coleta automática, histórico e publicação no canal de atualizações | ✅ |
 | 3 | Integração de fonte real de estatísticas | ✅ |
 | 3b | Comandos `/hero`, `/counter`, `/patch` | ✅ |
-| 3c | Comando `/build` | ⏳ |
+| 3c | Comando `/build` | ✅ |
 | 4 | Player Tracking, Match History (`/player`, `/track`, `/compare`) | ⏳ |
 | 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |
 | 6 | Dashboard web | ⏳ |

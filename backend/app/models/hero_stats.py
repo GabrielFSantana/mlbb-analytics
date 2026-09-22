@@ -9,6 +9,7 @@ from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Uniq
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
+from app.database.types import StrEnumType
 from app.models.enums import RankFilter
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ class HeroStats(Base, TimestampMixin):
     matches: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     rank_filter: Mapped[RankFilter] = mapped_column(
-        String(20), nullable=False, default=RankFilter.ALL
+        StrEnumType(RankFilter, 20), nullable=False, default=RankFilter.ALL
     )
     patch: Mapped[str] = mapped_column(String(20), nullable=False)
     collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

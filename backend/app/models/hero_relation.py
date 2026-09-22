@@ -8,6 +8,7 @@ from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
+from app.database.types import StrEnumType
 from app.models.enums import RelationType
 
 if TYPE_CHECKING:
@@ -37,7 +38,9 @@ class HeroRelation(Base, TimestampMixin):
     related_hero_id: Mapped[int] = mapped_column(
         ForeignKey("heroes.id", ondelete="CASCADE"), nullable=False
     )
-    relation_type: Mapped[RelationType] = mapped_column(String(20), nullable=False)
+    relation_type: Mapped[RelationType] = mapped_column(
+        StrEnumType(RelationType, 20), nullable=False
+    )
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="unknown")
 
     hero: Mapped[Hero] = relationship(foreign_keys=[hero_id], back_populates="relations")
