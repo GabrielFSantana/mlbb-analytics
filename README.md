@@ -244,7 +244,7 @@ deve ser commitado.
 | GET | `/health` | Estado do processo, do banco e do provider. |
 | GET | `/api/v1/heroes` | Lista heróis. Filtros: `role`, `search`, `limit`, `offset`. |
 | GET | `/api/v1/heroes/{id}` | Detalhe + estatística mais recente. |
-| GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug (usada pelo bot). |
+| GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug. Aceita `rank`. |
 | GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
 | GET | `/api/v1/builds/{termo}` | Builds recomendadas. Aceita `lane` e `rank_filter`. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
@@ -263,7 +263,7 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 |---|---|
 | `/meta` | ✅ Fase 1 — tier list de todas as lanes |
 | `/meta lane:<...> ranque:<...> formato:<...>` | ✅ — tier list em **imagem** (padrão) ou texto |
-| `/hero <nome>` | ✅ Fase 3b — classe, win/pick/ban e posição no meta por lane |
+| `/hero <nome> [ranque] [formato]` | ✅ — ficha em **imagem** (padrão) ou texto |
 | `/counter <nome>` | ✅ Fase 3b — forte contra, fraco contra, combina com |
 | `/build <herói> [lane]` | ✅ Fase 3c — itens centrais, emblema e feitiço mais usados |
 | `/patch` | ✅ Fase 3b — patch vigente segundo a fonte |
@@ -315,10 +315,16 @@ rate no período.
 
 ## Cards em imagem
 
-O `/meta` responde com um PNG gerado na hora: tiers como faixas coloridas, retratos
-oficiais dos heróis (CDN da Moonton, pelas URLs que já guardamos) e cabeçalho com lane,
-ranque e patch. Uma tier list com trinta heróis vira parede de texto num embed; em
-imagem a leitura é imediata.
+`/meta` e `/hero` respondem com um PNG gerado na hora.
+
+O card do **meta** traz tiers como faixas coloridas e os retratos oficiais dos heróis
+(CDN da Moonton, pelas URLs que já guardamos). Uma tier list com trinta heróis vira
+parede de texto num embed; em imagem a leitura é imediata.
+
+O card do **herói** traz retrato grande, classe, e win/pick/ban com barras. As barras
+usam exatamente as mesmas faixas de referência do cálculo de score
+(`app/domain/scoring.py`) — se divergissem, a barra contaria uma história diferente do
+tier exibido ao lado. Há teste garantindo essa amarração.
 
 `formato:Texto` volta ao embed. E a imagem **nunca** impede a resposta: se a
 renderização falhar — rede, fonte ausente, imagem corrompida — o comando cai para o

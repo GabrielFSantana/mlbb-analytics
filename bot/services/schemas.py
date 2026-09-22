@@ -81,6 +81,7 @@ class HeroLanePosition(ApiModel):
 
 class HeroDetail(Hero):
     latest_stats: HeroStats | None = None
+    rank_filter: str = "all"
     lanes: list[HeroLanePosition] = []
     patch: str | None = None
     source: str | None = None

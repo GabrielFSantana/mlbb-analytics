@@ -100,9 +100,10 @@ class MLBBApiClient:
         payload = await self._get(path, **params)
         return MetaResponse.model_validate(payload)
 
-    async def get_hero(self, termo: str) -> HeroDetail:
+    async def get_hero(self, termo: str, rank: str | None = None) -> HeroDetail:
         """Detalhe de um heroi por nome ou slug."""
-        payload = await self._get(f"/api/v1/heroes/by-name/{quote(termo)}")
+        params: dict[str, object] = {"rank": rank} if rank else {}
+        payload = await self._get(f"/api/v1/heroes/by-name/{quote(termo)}", **params)
         return HeroDetail.model_validate(payload)
 
     async def get_hero_counters(self, termo: str) -> HeroCounters:

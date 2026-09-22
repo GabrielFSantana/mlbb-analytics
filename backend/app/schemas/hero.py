@@ -71,6 +71,7 @@ class HeroRelationRead(BaseModel):
 
 class HeroWithStats(HeroRead):
     latest_stats: HeroStatsRead | None = None
+    rank_filter: RankFilter = RankFilter.ALL
     lanes: list[HeroLanePosition] = Field(
         default_factory=list, description="Posicao no meta por lane, na coleta mais recente."
     )

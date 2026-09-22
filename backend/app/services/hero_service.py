@@ -45,18 +45,28 @@ class HeroService:
             items=[HeroRead.model_validate(hero) for hero in items],
         )
 
-    def get_hero(self, hero_id: int) -> HeroWithStats:
+    def get_hero(
+        self,
+        hero_id: int,
+        *,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> HeroWithStats:
         hero = self._require(self.heroes.get(hero_id), hero_id)
-        latest = self.stats.latest_for_hero(hero.id)
-        return self._to_with_stats(hero, latest)
+        latest = self.stats.latest_for_hero(hero.id, rank_filter=rank_filter)
+        return self._to_with_stats(hero, latest, rank_filter)
 
-    def get_hero_by_name_or_slug(self, term: str) -> HeroWithStats:
+    def get_hero_by_name_or_slug(
+        self,
+        term: str,
+        *,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> HeroWithStats:
         """Busca usada pelo bot: aceita tanto o nome quanto o slug."""
         normalized = term.strip().lower().replace(" ", "-")
         hero = self.heroes.get_by_slug(normalized) or self.heroes.get_by_name(term)
         hero = self._require(hero, term)
-        latest = self.stats.latest_for_hero(hero.id)
-        return self._to_with_stats(hero, latest)
+        latest = self.stats.latest_for_hero(hero.id, rank_filter=rank_filter)
+        return self._to_with_stats(hero, latest, rank_filter)
 
     def list_hero_stats(
         self,
@@ -72,33 +82,49 @@ class HeroService:
         )
         return [HeroStatsRead.model_validate(reading) for reading in readings]
 
-    def _to_with_stats(self, hero: Hero, latest: HeroStats | None) -> HeroWithStats:
+    def _to_with_stats(
+        self,
+        hero: Hero,
+        latest: HeroStats | None,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> HeroWithStats:
         provider = get_provider()
         return HeroWithStats(
             **HeroRead.model_validate(hero).model_dump(),
             latest_stats=HeroStatsRead.model_validate(latest) if latest else None,
-            lanes=self._lane_positions(hero.id),
+            lanes=self._lane_positions(hero.id, rank_filter),
             patch=latest.patch if latest else None,
             source=latest.source if latest else None,
             is_mock=provider.is_mock,
+            rank_filter=rank_filter,
         )
 
-    def _lane_positions(self, hero_id: int) -> list[HeroLanePosition]:
+    def _lane_positions(
+        self,
+        hero_id: int,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> list[HeroLanePosition]:
         """Tier e score do heroi em cada lane, na coleta mais recente.
 
         A lane nao vive na tabela de herois: um heroi joga em mais de uma, e
         a forca dele varia entre elas. A informacao vem dos snapshots.
         """
         fonte = self.meta.latest_source()
-        ultima = self.meta.latest_collected_at(source=fonte)
+        ultima = self.meta.latest_collected_at(source=fonte, rank_filter=rank_filter)
         if ultima is None:
             return []
 
-        anterior = self.meta.previous_collected_at(ultima, source=fonte)
+        anterior = self.meta.previous_collected_at(
+            ultima, source=fonte, rank_filter=rank_filter
+        )
         scores_anteriores = {
             snapshot.lane: snapshot.score
             for snapshot in (
-                self.meta.list_at(anterior, source=fonte, with_hero=False) if anterior else []
+                self.meta.list_at(
+                    anterior, source=fonte, rank_filter=rank_filter, with_hero=False
+                )
+                if anterior
+                else []
             )
             if snapshot.hero_id == hero_id
         }
@@ -114,7 +140,9 @@ class HeroService:
                     else None
                 ),
             )
-            for snapshot in self.meta.list_at(ultima, source=fonte, with_hero=False)
+            for snapshot in self.meta.list_at(
+                ultima, source=fonte, rank_filter=rank_filter, with_hero=False
+            )
             if snapshot.hero_id == hero_id
         ]
         posicoes.sort(key=lambda p: -p.score)

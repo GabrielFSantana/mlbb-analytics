@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 import pytest
 from PIL import Image
 
-from bot.services.schemas import MetaResponse
+from bot.services.schemas import HeroDetail, MetaResponse
 from bot.ui import cards
 
 
@@ -147,3 +147,99 @@ def test_todos_os_tiers_tem_cor():
     from bot.ui.embeds import TIER_ORDER
 
     assert set(TIER_ORDER) <= set(cards.CORES_TIER)
+
+
+# -- card de heroi ------------------------------------------------------
+
+
+def hero_detail(**overrides: object) -> HeroDetail:
+    base: dict[str, object] = {
+        "id": 1,
+        "name": "Chou",
+        "slug": "chou",
+        "role": "fighter",
+        "image_url": "https://cdn/sun.png",
+        "latest_stats": {
+            "win_rate": 0.447,
+            "pick_rate": 0.0097,
+            "ban_rate": 0.029,
+            "patch": "2.1.18",
+            "collected_at": datetime(2026, 9, 22, tzinfo=UTC),
+            "source": "rone_arena",
+        },
+        "lanes": [
+            {"lane": "roam", "tier": "D", "score": 18.6, "score_delta": None},
+            {"lane": "exp", "tier": "D", "score": 18.6, "score_delta": -1.2},
+        ],
+        "patch": "2.1.18",
+        "source": "rone_arena",
+        "rank_filter": "all",
+        "is_mock": False,
+    }
+    base.update(overrides)
+    return HeroDetail.model_validate(base)
+
+
+async def test_hero_card_gera_png():
+    dados = await cards.render_hero_card(hero_detail())
+    assert dados is not None
+
+    imagem = Image.open(io.BytesIO(dados))
+    assert imagem.format == "PNG"
+    assert imagem.width == cards.LARGURA
+
+
+async def test_hero_card_cresce_com_as_lanes():
+    """Regressao: com altura fixa, o rodape invadia a area das lanes."""
+    sem_lanes = await cards.render_hero_card(hero_detail(lanes=[]))
+    com_lanes = await cards.render_hero_card(hero_detail())
+
+    assert sem_lanes is not None and com_lanes is not None
+    altura_sem = Image.open(io.BytesIO(sem_lanes)).height
+    altura_com = Image.open(io.BytesIO(com_lanes)).height
+    # A secao de lanes precisa de espaco proprio, senao sobrepoe o rodape.
+    assert altura_com >= altura_sem + cards.ALTURA_PILL
+
+
+async def test_hero_card_sem_estatisticas_nao_quebra():
+    dados = await cards.render_hero_card(hero_detail(latest_stats=None, lanes=[]))
+    assert dados is not None
+
+
+async def test_hero_card_sem_retrato_nao_quebra(monkeypatch):
+    monkeypatch.setattr(cards, "_retratos", {})
+
+    async def sem_rede(urls):
+        return {}
+
+    monkeypatch.setattr(cards, "_baixar_retratos", sem_rede)
+    dados = await cards.render_hero_card(hero_detail())
+    assert dados is not None
+
+
+def test_todos_os_papeis_tem_cor():
+    from bot.ui.embeds import ROLE_LABELS
+
+    assert set(ROLE_LABELS) == set(cards.CORES_PAPEL)
+
+
+def test_faixas_das_barras_batem_com_o_scoring():
+    """As barras precisam contar a mesma historia que o tier ao lado.
+
+    Se as constantes do scoring mudarem sem mudar aqui, a barra de win rate
+    passaria a discordar visualmente do tier calculado.
+    """
+    import sys
+
+    sys.path.insert(0, "backend")
+    from app.domain.scoring import (
+        BAN_RATE_SATURATION,
+        PICK_RATE_SATURATION,
+        WIN_RATE_CEILING,
+        WIN_RATE_FLOOR,
+    )
+
+    assert cards.BARRA_WIN_MIN == WIN_RATE_FLOOR
+    assert cards.BARRA_WIN_MAX == WIN_RATE_CEILING
+    assert cards.BARRA_PICK_MAX == PICK_RATE_SATURATION
+    assert cards.BARRA_BAN_MAX == BAN_RATE_SATURATION

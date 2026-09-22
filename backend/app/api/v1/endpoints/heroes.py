@@ -29,8 +29,12 @@ def list_heroes(
     responses={404: {"model": ErrorResponse}},
     summary="Detalhe de um heroi",
 )
-def get_hero(hero_id: int, service: HeroServiceDep) -> HeroWithStats:
-    return service.get_hero(hero_id)
+def get_hero(
+    hero_id: int,
+    service: HeroServiceDep,
+    rank: RankFilter = Query(default=RankFilter.ALL),
+) -> HeroWithStats:
+    return service.get_hero(hero_id, rank_filter=rank)
 
 
 @router.get(
@@ -39,9 +43,13 @@ def get_hero(hero_id: int, service: HeroServiceDep) -> HeroWithStats:
     responses={404: {"model": ErrorResponse}},
     summary="Detalhe de um heroi por nome ou slug",
 )
-def get_hero_by_name(term: str, service: HeroServiceDep) -> HeroWithStats:
+def get_hero_by_name(
+    term: str,
+    service: HeroServiceDep,
+    rank: RankFilter = Query(default=RankFilter.ALL),
+) -> HeroWithStats:
     """Usado pelo bot, que recebe o nome digitado pelo usuario."""
-    return service.get_hero_by_name_or_slug(term)
+    return service.get_hero_by_name_or_slug(term, rank_filter=rank)
 
 
 @router.get(

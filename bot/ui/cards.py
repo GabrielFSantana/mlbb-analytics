@@ -24,8 +24,14 @@ import httpx
 from PIL import Image, ImageDraw, ImageFont
 
 from bot.core.logging import get_logger
-from bot.services.schemas import MetaResponse
-from bot.ui.embeds import LANE_LABELS, RANK_LABELS, TIER_ORDER, lane_label
+from bot.services.schemas import HeroDetail, MetaResponse
+from bot.ui.embeds import (
+    LANE_LABELS,
+    RANK_LABELS,
+    ROLE_LABELS,
+    TIER_ORDER,
+    lane_label,
+)
 
 logger = get_logger(__name__)
 
@@ -262,4 +268,170 @@ async def render_meta_card(meta: MetaResponse, *, lane: str | None = None) -> by
     return await asyncio.to_thread(_compor, meta, lane, retratos)
 
 
-__all__ = ["LANE_LABELS", "render_meta_card"]
+
+
+# ---------------------------------------------------------------------
+# Card de heroi
+# ---------------------------------------------------------------------
+
+RETRATO_GRANDE = 190
+ALTURA_PILL = 44
+
+CORES_PAPEL: dict[str, tuple[int, int, int]] = {
+    "tank": (96, 142, 200),
+    "fighter": (214, 120, 82),
+    "assassin": (196, 90, 120),
+    "mage": (150, 110, 214),
+    "marksman": (206, 166, 76),
+    "support": (96, 186, 150),
+}
+
+# Faixas de referencia das barras. Sao as MESMAS do calculo de score
+# (app/domain/scoring.py): se mudarem la, mudam aqui, senao a barra passa a
+# contar uma historia diferente do tier exibido ao lado.
+BARRA_WIN_MIN, BARRA_WIN_MAX = 0.42, 0.58
+BARRA_PICK_MAX = 0.03
+BARRA_BAN_MAX = 0.50
+
+
+def _barra(
+    desenho: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    largura: int,
+    fracao: float,
+    cor: tuple[int, int, int],
+    altura: int = 10,
+) -> None:
+    desenho.rounded_rectangle((x, y, x + largura, y + altura), altura // 2, fill=COR_BORDA)
+    preenchido = int(largura * max(0.0, min(1.0, fracao)))
+    if preenchido > altura:
+        desenho.rounded_rectangle(
+            (x, y, x + preenchido, y + altura), altura // 2, fill=cor
+        )
+
+
+def _compor_hero(hero: HeroDetail, retrato_bytes: bytes | None) -> bytes:
+    fonte_nome = _carregar_fonte(FONTES_NEGRITO, 40)
+    fonte_papel = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_rotulo = _carregar_fonte(FONTES_REGULARES, 14)
+    fonte_valor = _carregar_fonte(FONTES_NEGRITO, 20)
+    fonte_tier = _carregar_fonte(FONTES_NEGRITO, 17)
+    fonte_lane = _carregar_fonte(FONTES_REGULARES, 12)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 13)
+
+    # O layout flui de cima para baixo: cada bloco sabe onde termina e o
+    # proximo comeca dali. Altura fixa por secao fazia o rodape invadir a
+    # area das lanes quando o heroi jogava em mais de uma.
+    tem_lanes = bool(hero.lanes)
+    topo_retrato = MARGEM + 28
+    fim_conteudo = topo_retrato + RETRATO_GRANDE
+
+    y_lanes = fim_conteudo + 26 if tem_lanes else fim_conteudo
+    fim_lanes = (y_lanes + 26 + ALTURA_PILL) if tem_lanes else fim_conteudo
+    y_rodape = fim_lanes + 18
+    altura = y_rodape + 22 + MARGEM
+
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+
+    cor_papel = CORES_PAPEL.get(hero.role, COR_TEXTO_FRACO)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+    # Faixa da cor da classe, dando identidade ao card.
+    desenho.rounded_rectangle((MARGEM, MARGEM, MARGEM + 8, altura - MARGEM), 4, fill=cor_papel)
+
+    # Retrato
+    px, py = MARGEM + 30, topo_retrato
+    if retrato_bytes:
+        try:
+            retrato = Image.open(io.BytesIO(retrato_bytes)).convert("RGBA")
+            retrato = retrato.resize((RETRATO_GRANDE, RETRATO_GRANDE), Image.LANCZOS)
+            imagem.paste(retrato, (px, py), _mascara_arredondada(RETRATO_GRANDE, 18))
+        except OSError:  # pragma: no cover - imagem corrompida
+            retrato_bytes = None
+    if not retrato_bytes:
+        desenho.rounded_rectangle(
+            (px, py, px + RETRATO_GRANDE, py + RETRATO_GRANDE), 18, fill=COR_BORDA
+        )
+
+    # Nome e classe
+    tx = px + RETRATO_GRANDE + 34
+    desenho.text((tx, py - 2), hero.name, font=fonte_nome, fill=COR_TEXTO)
+
+    papel = ROLE_LABELS.get(hero.role, hero.role).upper()
+    largura_papel = fonte_papel.getlength(papel) + 24
+    desenho.rounded_rectangle((tx, py + 52, tx + largura_papel, py + 80), 14, fill=cor_papel)
+    desenho.text((tx + 12, py + 58), papel, font=fonte_papel, fill=(20, 22, 28))
+
+    # Estatisticas com barra
+    stats = hero.latest_stats
+    sy = py + 100
+    if stats:
+        blocos = [
+            ("Win rate", stats.win_rate, (stats.win_rate - BARRA_WIN_MIN)
+             / (BARRA_WIN_MAX - BARRA_WIN_MIN), (118, 200, 128)),
+            ("Pick rate", stats.pick_rate, stats.pick_rate / BARRA_PICK_MAX, (98, 168, 220)),
+            ("Ban rate", stats.ban_rate, stats.ban_rate / BARRA_BAN_MAX, (255, 120, 110)),
+        ]
+        largura_bloco = 200
+        for indice, (rotulo, valor, fracao, cor) in enumerate(blocos):
+            bx = tx + indice * largura_bloco
+            desenho.text((bx, sy), rotulo, font=fonte_rotulo, fill=COR_TEXTO_FRACO)
+            desenho.text((bx, sy + 20), f"{valor * 100:.2f}%", font=fonte_valor, fill=COR_TEXTO)
+            _barra(desenho, bx, sy + 50, largura_bloco - 28, fracao, cor)
+    else:
+        desenho.text((tx, sy + 16), "Sem coleta ainda.", font=fonte_rotulo, fill=COR_TEXTO_FRACO)
+
+    # Posicao no meta por lane
+    if tem_lanes:
+        desenho.text((px, y_lanes), "POSICAO NO META", font=fonte_rotulo, fill=COR_TEXTO_FRACO)
+        lx = px
+        for posicao in hero.lanes:
+            cor_tier = CORES_TIER.get(posicao.tier, COR_TEXTO_FRACO)
+            lane_nome = LANE_LABELS.get(posicao.lane, posicao.lane)
+            largura_pill = max(150, int(fonte_lane.getlength(lane_nome)) + 76)
+            topo = y_lanes + 26
+            desenho.rounded_rectangle(
+                (lx, topo, lx + largura_pill, topo + ALTURA_PILL), 10, fill=COR_FUNDO
+            )
+            desenho.rounded_rectangle((lx, topo, lx + 44, topo + ALTURA_PILL), 10, fill=cor_tier)
+            caixa = desenho.textbbox((0, 0), posicao.tier, font=fonte_tier)
+            desenho.text(
+                (lx + 22 - (caixa[2] - caixa[0]) / 2, topo + 12),
+                posicao.tier,
+                font=fonte_tier,
+                fill=(20, 22, 28),
+            )
+            desenho.text((lx + 56, topo + 8), lane_nome, font=fonte_lane, fill=COR_TEXTO)
+            detalhe = f"{posicao.score:.1f} pts"
+            if posicao.score_delta is not None:
+                detalhe += f" ({posicao.score_delta:+.1f})"
+            desenho.text((lx + 56, topo + 24), detalhe, font=fonte_lane, fill=COR_TEXTO_FRACO)
+            lx += largura_pill + 12
+
+    # Rodape
+    partes = [RANK_LABELS.get(hero.rank_filter, hero.rank_filter)]
+    if hero.patch:
+        partes.append(f"Patch {hero.patch}")
+    if hero.source:
+        partes.append(f"Fonte: {hero.source}")
+    if hero.is_mock:
+        partes.append("DADOS MOCK")
+    desenho.text((px, y_rodape), " · ".join(partes), font=fonte_rodape, fill=COR_TEXTO_FRACO)
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_hero_card(hero: HeroDetail) -> bytes | None:
+    """Gera o PNG da ficha do heroi."""
+    retratos = await _baixar_retratos([hero.image_url] if hero.image_url else [])
+    return await asyncio.to_thread(
+        _compor_hero, hero, retratos.get(hero.image_url or "")
+    )
+
+
+__all__ = ["LANE_LABELS", "render_hero_card", "render_meta_card"]
