@@ -103,6 +103,9 @@ def provider_fixo_em_mock(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     from app.providers import factory
 
     monkeypatch.setattr(settings, "mlbb_provider", "mock")
+    # O TestClient executa o lifespan da app, que iniciaria o agendador e
+    # dispararia uma coleta de verdade durante os testes.
+    monkeypatch.setattr(settings, "sync_enabled", False)
     factory.get_provider.cache_clear()
     yield
     factory.get_provider.cache_clear()

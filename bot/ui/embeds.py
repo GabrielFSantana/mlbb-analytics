@@ -10,7 +10,7 @@ from datetime import datetime
 
 import discord
 
-from bot.services.schemas import MetaEntry, MetaResponse
+from bot.services.schemas import MetaEntry, MetaResponse, MetaUpdate
 
 LANE_LABELS: dict[str, str] = {
     "jungle": "JUNGLE",
@@ -155,3 +155,67 @@ def build_error_embed(title: str, message: str) -> discord.Embed:
         description=message,
         colour=discord.Colour.from_rgb(200, 80, 80),
     )
+
+
+# ---------------------------------------------------------------------
+# Atualizacoes automaticas de meta (Fase 2)
+# ---------------------------------------------------------------------
+
+COLOR_UPDATE = discord.Colour.from_rgb(88, 166, 255)
+
+
+def _linha_movimento(entry: MetaEntry) -> str:
+    """Linha das secoes de alta/queda: heroi, lane e variacao."""
+    lane = LANE_LABELS.get(entry.lane, entry.lane)
+    delta = entry.score_delta or 0.0
+    wr = ""
+    if entry.win_rate_delta is not None:
+        wr = f" · {entry.win_rate_delta * 100:+.1f}pp WR"
+    return f"**{entry.hero.name}** ({lane}) {delta:+.1f} pts{wr}"
+
+
+def _linha_tier(entry: MetaEntry) -> str:
+    lane = LANE_LABELS.get(entry.lane, entry.lane)
+    return f"**{entry.hero.name}** ({lane}) {entry.previous_tier} → {entry.tier}"
+
+
+def _linha_win_rate(entry: MetaEntry) -> str:
+    delta = (entry.win_rate_delta or 0.0) * 100
+    atual = f" (agora {entry.win_rate * 100:.1f}%)" if entry.win_rate is not None else ""
+    return f"**{entry.hero.name}** {delta:+.2f}pp{atual}"
+
+
+def build_meta_update_embed(update: MetaUpdate) -> discord.Embed:
+    """Monta a mensagem publicada no canal de atualizacoes."""
+    periodo = (
+        f"{_format_timestamp(update.previous_collected_at)} → "
+        f"{_format_timestamp(update.collected_at)}"
+    )
+    embed = discord.Embed(
+        title="🔥 META UPDATE",
+        colour=COLOR_MOCK if update.is_mock else COLOR_UPDATE,
+        description=MOCK_WARNING if update.is_mock else f"Mudancas no periodo {periodo}.",
+    )
+
+    secoes: list[tuple[str, list[MetaEntry], object]] = [
+        ("📈 Subiu", update.rising, _linha_movimento),
+        ("📉 Caiu", update.falling, _linha_movimento),
+        ("⬆️ Subiu de tier", update.promoted, _linha_tier),
+        ("⬇️ Caiu de tier", update.demoted, _linha_tier),
+        ("🔥 Maior crescimento de WR", update.biggest_win_rate_gain, _linha_win_rate),
+    ]
+    for nome, entradas, formatador in secoes:
+        if not entradas:
+            continue
+        embed.add_field(
+            name=nome,
+            value="\n".join(formatador(e) for e in entradas[:MAX_TREND_ENTRIES]),
+            inline=False,
+        )
+
+    patch = update.patch or "desconhecido"
+    rodape = [f"Patch: {patch}", f"Fonte: {update.source}"]
+    if update.is_mock:
+        rodape.append("DADOS MOCK")
+    embed.set_footer(text=" • ".join(rodape))
+    return embed

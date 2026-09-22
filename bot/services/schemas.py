@@ -44,3 +44,18 @@ class MetaResponse(ApiModel):
     entries: list[MetaEntry] = []
     rising: list[MetaEntry] = []
     falling: list[MetaEntry] = []
+
+
+class MetaUpdate(ApiModel):
+    """O que mudou entre a coleta atual e a anterior."""
+
+    collected_at: datetime
+    previous_collected_at: datetime
+    patch: str | None = None
+    source: str
+    is_mock: bool
+    rising: list[MetaEntry] = []
+    falling: list[MetaEntry] = []
+    promoted: list[MetaEntry] = []
+    demoted: list[MetaEntry] = []
+    biggest_win_rate_gain: list[MetaEntry] = []

@@ -228,6 +228,11 @@ deve ser commitado.
 | `MLBB_STATS_WINDOW_DAYS` | não | Janela agregada: 1, 3, 7, 15 ou 30 dias. Padrão 7. |
 | `MLBB_API_TIMEOUT` | não | Timeout das chamadas à fonte, em segundos. |
 | `MLBB_API_CACHE_SECONDS` | não | Cache curto, evita repetir chamadas na mesma coleta. |
+| `SYNC_ENABLED` | não | Liga a coleta automática. Padrão `true`. |
+| `SYNC_HOURS` | não | Horas UTC da coleta, separadas por vírgula. Padrão `6,18`. |
+| `SYNC_ON_STARTUP` | não | Coleta no boot se ainda não houve coleta hoje. |
+| `META_UPDATES_ENABLED` | não | Liga a publicação automática no Discord. |
+| `META_POLL_MINUTES` | não | Intervalo com que o bot consulta novidades. Padrão 30. |
 | `APP_ENV` | não | `development` \| `staging` \| `production`. Em produção o log sai em JSON. |
 | `LOG_LEVEL` | não | `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 
@@ -242,6 +247,8 @@ deve ser commitado.
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
 | GET | `/api/v1/meta` | Tier list de todas as lanes. |
 | GET | `/api/v1/meta/{lane}` | Tier list de uma lane (`jungle`, `gold`, `mid`, `exp`, `roam`). |
+| GET | `/api/v1/meta/updates/pending` | Atualização ainda não publicada (usada pelo bot). |
+| POST | `/api/v1/meta/updates/ack` | Confirma que uma atualização foi publicada. |
 | GET | `/api/v1/patches` | Lista de patches. |
 | GET | `/api/v1/patches/current` | Patch vigente. |
 
@@ -271,6 +278,36 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 
 SQLite não é usado nem em teste: a diferença de dialeto esconde justamente os bugs
 que esses testes deveriam pegar.
+
+## Coleta automática e atualizações no Discord
+
+A partir da Fase 2, os dados se atualizam sozinhos.
+
+**Backend.** Um agendador (APScheduler) roda dentro do processo da API e coleta nos
+horários de `SYNC_HOURS` (padrão 06:00 e 18:00 UTC). A fonte agrega por dia, então
+coletar de hora em hora não traria informação nova. Se o container subir e ainda não
+houver coleta do dia, uma é feita no boot.
+
+**Bot.** A cada `META_POLL_MINUTES`, o bot pergunta à API se existe uma coleta ainda
+não publicada. Havendo mudanças relevantes, publica um embed em
+`DISCORD_META_CHANNEL_ID` e confirma o envio.
+
+**Por que a confirmação existe.** O estado de "já publicado" fica na tabela
+`meta_announcements`, no banco — não na memória do bot. Sem isso, reiniciar o bot
+republicaria a mesma atualização, e uma falha no meio faria a mensagem se perder. A
+confirmação só acontece **depois** do envio dar certo: se o Discord recusar, a próxima
+passagem tenta de novo.
+
+**Ruído não vira mensagem.** Um herói só entra no anúncio se variar ao menos 1,5 ponto
+de score ou 0,5 ponto percentual de win rate. Coletas sem mudança relevante são
+marcadas como anunciadas sem gerar post.
+
+A mensagem traz: quem subiu, quem caiu, mudanças de tier e os maiores ganhos de win
+rate no período.
+
+> Ao escalar a API para mais de um worker, mova o agendador para um processo próprio —
+> senão cada worker terá o seu. A escrita é idempotente, então o efeito seria
+> desperdício de chamadas à fonte, não dado corrompido.
 
 ## Como o score do meta é calculado
 
@@ -307,7 +344,7 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 | Fase | Escopo | Status |
 |---|---|---|
 | 1 | Estrutura, API, Postgres, Alembic, Docker, `/health`, heroes, meta, bot `/meta` | ✅ |
-| 2 | Job periódico (APScheduler), histórico, publicação automática em `#meta-updates` | ⏳ |
+| 2 | Coleta automática, histórico e publicação no canal de atualizações | ✅ |
 | 3 | Integração de fonte real de estatísticas | ✅ |
 | 3b | Comandos `/hero`, `/build`, `/patch` | ⏳ |
 | 4 | Player Tracking, Match History (`/player`, `/track`, `/compare`) | ⏳ |

@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     # sem congelar o dado entre execucoes.
     mlbb_api_cache_seconds: float = 300.0
 
+    # --- Coleta automatica (Fase 2) -----------------------------------
+    sync_enabled: bool = True
+    # Horas (UTC) em que a coleta roda. A fonte agrega por dia, entao duas
+    # execucoes diarias ja cobrem atraso de publicacao sem martelar a API.
+    sync_hours: str = "6,18"
+    # Roda uma coleta no boot se o banco ainda nao tem dados do dia.
+    sync_on_startup: bool = True
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

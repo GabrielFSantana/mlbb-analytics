@@ -1,6 +1,6 @@
 from app.schemas.common import ErrorResponse, HealthResponse, PatchRead
 from app.schemas.hero import HeroListResponse, HeroRead, HeroStatsRead, HeroWithStats
-from app.schemas.meta import MetaEntry, MetaResponse
+from app.schemas.meta import MetaAnnouncementAck, MetaEntry, MetaResponse, MetaUpdate
 
 __all__ = [
     "ErrorResponse",
@@ -9,7 +9,9 @@ __all__ = [
     "HeroRead",
     "HeroStatsRead",
     "HeroWithStats",
+    "MetaAnnouncementAck",
     "MetaEntry",
     "MetaResponse",
+    "MetaUpdate",
     "PatchRead",
 ]

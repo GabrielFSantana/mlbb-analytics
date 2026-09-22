@@ -46,3 +46,34 @@ class MetaResponse(BaseModel):
     falling: list[MetaEntry] = Field(
         default_factory=list, description="Maiores quedas de score desde a coleta anterior."
     )
+
+
+class MetaUpdate(BaseModel):
+    """O que mudou entre a coleta atual e a anterior.
+
+    E o payload que o bot transforma na mensagem do canal de atualizacoes.
+    """
+
+    collected_at: datetime
+    previous_collected_at: datetime
+    patch: str | None = None
+    source: str
+    is_mock: bool
+    rising: list[MetaEntry] = Field(default_factory=list, description="Maiores altas de score.")
+    falling: list[MetaEntry] = Field(default_factory=list, description="Maiores quedas de score.")
+    promoted: list[MetaEntry] = Field(
+        default_factory=list, description="Herois que subiram de tier."
+    )
+    demoted: list[MetaEntry] = Field(
+        default_factory=list, description="Herois que cairam de tier."
+    )
+    biggest_win_rate_gain: list[MetaEntry] = Field(
+        default_factory=list, description="Maiores ganhos de win rate."
+    )
+
+
+class MetaAnnouncementAck(BaseModel):
+    """Confirmacao de que o bot publicou uma coleta."""
+
+    collected_at: datetime
+    source: str

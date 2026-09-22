@@ -7,13 +7,14 @@ util em vez de estourar um traceback no Discord.
 
 from __future__ import annotations
 
+from datetime import datetime
 from types import TracebackType
 
 import httpx
 
 from bot.core.config import settings
 from bot.core.logging import get_logger
-from bot.services.schemas import MetaResponse
+from bot.services.schemas import MetaResponse, MetaUpdate
 
 logger = get_logger(__name__)
 
@@ -82,6 +83,28 @@ class MLBBApiClient:
             params["limit"] = limit
         payload = await self._get(path, **params)
         return MetaResponse.model_validate(payload)
+
+    async def get_pending_update(self) -> MetaUpdate | None:
+        """Atualizacao de meta ainda nao publicada, se houver."""
+        payload = await self._get("/api/v1/meta/updates/pending")
+        if payload is None:
+            return None
+        return MetaUpdate.model_validate(payload)
+
+    async def ack_update(self, collected_at: datetime, source: str) -> None:
+        """Confirma a publicacao, para a mesma coleta nao sair duas vezes."""
+        if self._client is None:
+            await self.start()
+        assert self._client is not None
+        try:
+            response = await self._client.post(
+                "/api/v1/meta/updates/ack",
+                json={"collected_at": collected_at.isoformat(), "source": source},
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.error("falha ao confirmar publicacao", extra={"error": str(exc)})
+            raise BackendUnavailableError(str(exc)) from exc
 
     async def health(self) -> dict[str, object]:
         payload = await self._get("/health")

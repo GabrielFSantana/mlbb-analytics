@@ -15,7 +15,10 @@ from bot.services.api_client import MLBBApiClient
 logger = get_logger(__name__)
 
 # Extensoes carregadas no boot. Novos comandos entram aqui.
-EXTENSIONS: tuple[str, ...] = ("bot.commands.meta",)
+EXTENSIONS: tuple[str, ...] = (
+    "bot.commands.meta",
+    "bot.commands.meta_updates",
+)
 
 
 class MLBBBot(commands.Bot):

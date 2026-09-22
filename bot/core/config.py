@@ -37,6 +37,11 @@ class BotSettings(BaseSettings):
     log_level: str = "INFO"
     app_env: str = "development"
 
+    # --- Publicacao automatica de meta (Fase 2) -----------------------
+    meta_updates_enabled: bool = True
+    # De quanto em quanto tempo o bot pergunta a API se ha novidade.
+    meta_poll_minutes: int = 30
+
     @field_validator("discord_guild_id", "discord_meta_channel_id", mode="before")
     @classmethod
     def _empty_string_as_none(cls, value: object) -> object:

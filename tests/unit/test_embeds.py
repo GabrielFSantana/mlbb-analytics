@@ -6,8 +6,13 @@ from datetime import UTC, datetime
 
 import pytest
 
-from bot.services.schemas import Hero, MetaEntry, MetaResponse
-from bot.ui.embeds import MOCK_WARNING, build_meta_embed, lane_label
+from bot.services.schemas import Hero, MetaEntry, MetaResponse, MetaUpdate
+from bot.ui.embeds import (
+    MOCK_WARNING,
+    build_meta_embed,
+    build_meta_update_embed,
+    lane_label,
+)
 
 
 def make_entry(
@@ -127,3 +132,66 @@ def test_campos_respeitam_o_limite_do_discord():
     entries = [make_entry(f"Heroi{index}", "S", score=70.0) for index in range(40)]
     embed = build_meta_embed(make_meta(entries=entries), lane="jungle")
     assert all(len(field.value or "") <= 1024 for field in embed.fields)
+
+
+# -- embed de atualizacao automatica (Fase 2) ---------------------------
+
+
+def make_update(**overrides: object) -> MetaUpdate:
+    base: dict[str, object] = {
+        "collected_at": datetime(2026, 9, 22, tzinfo=UTC),
+        "previous_collected_at": datetime(2026, 9, 21, tzinfo=UTC),
+        "patch": "2.1.18",
+        "source": "rone_arena",
+        "is_mock": False,
+        "rising": [make_entry("Leomord", "S", delta=4.2)],
+        "falling": [make_entry("Hayabusa", "B", score=45.0, delta=-3.1)],
+        "promoted": [make_entry("Leomord", "S", delta=4.2)],
+        "demoted": [],
+        "biggest_win_rate_gain": [make_entry("Balmond", "A", delta=2.0)],
+    }
+    base.update(overrides)
+    update = MetaUpdate.model_validate(base)
+    # previous_tier so existe quando houve mudanca de tier.
+    for entrada in update.promoted:
+        entrada.previous_tier = "A"
+    return update
+
+
+def test_update_tem_titulo_e_secoes():
+    embed = build_meta_update_embed(make_update())
+    assert embed.title == "🔥 META UPDATE"
+
+    nomes = [f.name for f in embed.fields]
+    assert "📈 Subiu" in nomes
+    assert "📉 Caiu" in nomes
+    assert "⬆️ Subiu de tier" in nomes
+    assert "🔥 Maior crescimento de WR" in nomes
+    # Secao vazia nao vira campo vazio.
+    assert "⬇️ Caiu de tier" not in nomes
+
+
+def test_update_mostra_transicao_de_tier():
+    embed = build_meta_update_embed(make_update())
+    campo = next(f for f in embed.fields if f.name == "⬆️ Subiu de tier")
+    assert "A → S" in (campo.value or "")
+
+
+def test_update_rodape_traz_patch_e_fonte():
+    embed = build_meta_update_embed(make_update())
+    rodape = embed.footer.text or ""
+    assert "2.1.18" in rodape
+    assert "rone_arena" in rodape
+    assert "DADOS MOCK" not in rodape
+
+
+def test_update_com_dados_mock_e_sinalizado():
+    embed = build_meta_update_embed(make_update(is_mock=True, source="mock"))
+    assert MOCK_WARNING in (embed.description or "")
+    assert "DADOS MOCK" in (embed.footer.text or "")
+
+
+def test_update_respeita_limite_de_campo_do_discord():
+    muitos = [make_entry(f"Heroi{i}", "S", delta=3.0) for i in range(40)]
+    embed = build_meta_update_embed(make_update(rising=muitos))
+    assert all(len(f.value or "") <= 1024 for f in embed.fields)

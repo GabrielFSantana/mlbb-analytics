@@ -13,6 +13,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import NotFoundError, ProviderError, ProviderNotSupportedError
 from app.core.logging import get_logger, setup_logging
+from app.jobs.scheduler import create_scheduler
 from app.providers.factory import get_provider
 
 setup_logging(settings.log_level, json_output=settings.is_production)
@@ -44,8 +45,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "provider de demonstracao ativo: os dados servidos sao ficticios",
             extra={"source": provider.source_description},
         )
-    yield
-    logger.info("api encerrando")
+
+    scheduler = create_scheduler()
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            # wait=False: nao seguramos o shutdown por uma coleta em curso.
+            scheduler.shutdown(wait=False)
+        logger.info("api encerrando")
 
 
 app = FastAPI(
