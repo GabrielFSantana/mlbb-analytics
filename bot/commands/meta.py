@@ -12,6 +12,15 @@ from bot.ui.embeds import build_error_embed, build_meta_embed
 
 logger = get_logger(__name__)
 
+RANK_CHOICES = [
+    app_commands.Choice(name="Todos os ranques", value="all"),
+    app_commands.Choice(name="Epico", value="epic"),
+    app_commands.Choice(name="Lenda", value="legend"),
+    app_commands.Choice(name="Mitico", value="mythic"),
+    app_commands.Choice(name="Honra", value="honor"),
+    app_commands.Choice(name="Gloria", value="glory"),
+]
+
 LANE_CHOICES = [
     app_commands.Choice(name="Jungle", value="jungle"),
     app_commands.Choice(name="Gold", value="gold"),
@@ -29,19 +38,24 @@ class MetaCog(commands.Cog):
         self.api = api
 
     @app_commands.command(name="meta", description="Mostra o meta atual do MLBB")
-    @app_commands.describe(lane="Lane especifica. Sem valor, mostra todas.")
-    @app_commands.choices(lane=LANE_CHOICES)
+    @app_commands.describe(
+        lane="Lane especifica. Sem valor, mostra todas.",
+        ranque="Faixa de ranque. Sem valor, usa o agregado geral.",
+    )
+    @app_commands.choices(lane=LANE_CHOICES, ranque=RANK_CHOICES)
     async def meta(
         self,
         interaction: discord.Interaction,
         lane: app_commands.Choice[str] | None = None,
+        ranque: app_commands.Choice[str] | None = None,
     ) -> None:
         # A chamada ao backend pode passar dos 3s do limite do Discord.
         await interaction.response.defer()
         lane_value = lane.value if lane else None
+        rank_value = ranque.value if ranque else None
 
         try:
-            data = await self.api.get_meta(lane_value)
+            data = await self.api.get_meta(lane_value, rank=rank_value)
         except BackendUnavailableError:
             await interaction.followup.send(
                 embed=build_error_embed(
@@ -51,7 +65,10 @@ class MetaCog(commands.Cog):
             )
             return
         except BackendError as exc:
-            logger.error("falha ao buscar meta", extra={"lane": lane_value, "error": str(exc)})
+            logger.error(
+                "falha ao buscar meta",
+                extra={"lane": lane_value, "rank": rank_value, "error": str(exc)},
+            )
             await interaction.followup.send(
                 embed=build_error_embed("Erro ao buscar o meta", str(exc))
             )

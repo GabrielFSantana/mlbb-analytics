@@ -84,11 +84,19 @@ class MLBBApiClient:
             raise BackendUnavailableError(str(exc)) from exc
         return response.json()
 
-    async def get_meta(self, lane: str | None = None, *, limit: int | None = None) -> MetaResponse:
+    async def get_meta(
+        self,
+        lane: str | None = None,
+        *,
+        limit: int | None = None,
+        rank: str | None = None,
+    ) -> MetaResponse:
         path = f"/api/v1/meta/{lane}" if lane else "/api/v1/meta"
         params: dict[str, object] = {}
         if limit is not None:
             params["limit"] = limit
+        if rank:
+            params["rank"] = rank
         payload = await self._get(path, **params)
         return MetaResponse.model_validate(payload)
 

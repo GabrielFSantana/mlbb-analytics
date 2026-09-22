@@ -128,3 +128,54 @@ def test_nao_mistura_fontes_ao_calcular_tendencia(client, db_session):
     assert entrada["score_delta"] is None
     assert body["previous_collected_at"] is None
     assert body["source"] == "fonte_real"
+
+
+def test_meta_por_faixa_de_ranque(client_seeded):
+    """O meta em Gloria e diferente do agregado: precisam ser consultaveis."""
+    geral = client_seeded.get("/api/v1/meta/jungle", params={"rank": "all"}).json()
+    gloria = client_seeded.get("/api/v1/meta/jungle", params={"rank": "glory"}).json()
+
+    assert geral["rank_filter"] == "all"
+    assert gloria["rank_filter"] == "glory"
+    assert geral["entries"]
+    assert gloria["entries"]
+
+
+def test_meta_nao_mistura_faixas(client, seeded_db):
+    """Uma faixa nao pode puxar snapshot de outra."""
+    from app.models import Hero, MetaSnapshot
+    from app.models.enums import HeroRole, Lane, RankFilter, Tier
+
+    # Heroi que existe SO na faixa mitica.
+    exclusivo = Hero(name="So No Mitico", slug="so-no-mitico", role=HeroRole.MAGE)
+    seeded_db.add(exclusivo)
+    seeded_db.flush()
+
+    quando = seeded_db.query(MetaSnapshot).first().collected_at
+    fonte = seeded_db.query(MetaSnapshot).first().source
+    seeded_db.add(
+        MetaSnapshot(
+            hero_id=exclusivo.id,
+            lane=Lane.MID,
+            rank_filter=RankFilter.MYTHIC,
+            tier=Tier.S_PLUS,
+            score=99.0,
+            patch="1.0",
+            collected_at=quando,
+            source=fonte,
+        )
+    )
+    seeded_db.flush()
+
+    mitico = client.get("/api/v1/meta", params={"rank": "mythic"}).json()
+    geral = client.get("/api/v1/meta", params={"rank": "all"}).json()
+
+    slugs_mitico = {e["hero"]["slug"] for e in mitico["entries"]}
+    slugs_geral = {e["hero"]["slug"] for e in geral["entries"]}
+
+    assert "so-no-mitico" in slugs_mitico
+    assert "so-no-mitico" not in slugs_geral
+
+
+def test_faixa_invalida_retorna_422(client_seeded):
+    assert client_seeded.get("/api/v1/meta", params={"rank": "diamante"}).status_code == 422

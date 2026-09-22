@@ -31,6 +31,17 @@ from app.repositories.stats_repository import HeroStatsRepository
 
 logger = get_logger(__name__)
 
+#: Faixas coletadas por padrao. `ALL` e o agregado; as demais permitem
+#: responder "como esta o meta no MEU ranque", que e a pergunta real.
+DEFAULT_RANK_FILTERS: tuple[RankFilter, ...] = (
+    RankFilter.ALL,
+    RankFilter.EPIC,
+    RankFilter.LEGEND,
+    RankFilter.MYTHIC,
+    RankFilter.HONOR,
+    RankFilter.GLORY,
+)
+
 
 @dataclass(slots=True)
 class SyncResult:
@@ -71,8 +82,16 @@ class SyncService:
         self.relations = HeroRelationRepository(db)
         self.items = ItemRepository(db)
 
-    def sync_all(self, *, rank_filter: RankFilter = RankFilter.ALL) -> SyncResult:
-        """Importa catalogo, patches, estatisticas e meta em uma transacao."""
+    def sync_all(
+        self,
+        *,
+        rank_filters: tuple[RankFilter, ...] = DEFAULT_RANK_FILTERS,
+    ) -> SyncResult:
+        """Importa catalogo, patches, estatisticas e meta em uma transacao.
+
+        Uma coleta por faixa de ranque: o meta em Gloria e bem diferente do
+        agregado geral, e o custo e uma requisicao por faixa por dia.
+        """
         result = SyncResult(provider=self.provider.name)
 
         self._sync_heroes(result)
@@ -80,8 +99,9 @@ class SyncService:
 
         self._sync_patches(result)
         index = self.heroes.slug_index()
-        self._sync_stats(result, index, rank_filter)
-        self._sync_meta(result, index)
+        for rank_filter in rank_filters:
+            self._sync_stats(result, index, rank_filter)
+            self._sync_meta(result, index, rank_filter)
         self._sync_relations(result, index)
         self._sync_items(result)
 
@@ -207,8 +227,13 @@ class SyncService:
 
         result.relations = self.relations.replace_for_source(self.provider.name, arestas)
 
-    def _sync_meta(self, result: SyncResult, index: dict[str, object]) -> None:
-        for entry in self.provider.get_meta():
+    def _sync_meta(
+        self,
+        result: SyncResult,
+        index: dict[str, object],
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> None:
+        for entry in self.provider.get_meta(rank_filter=rank_filter):
             hero = index.get(entry.hero_slug)
             if hero is None:
                 result.warnings.append(f"meta de heroi desconhecido: {entry.hero_slug}")
@@ -217,6 +242,7 @@ class SyncService:
             if self.meta.exists(
                 hero_id=hero_id,
                 lane=entry.lane,
+                rank_filter=entry.rank_filter,
                 patch=entry.patch,
                 collected_at=entry.collected_at,
             ):
@@ -226,6 +252,7 @@ class SyncService:
                 MetaSnapshot(
                     hero_id=hero_id,
                     lane=entry.lane,
+                    rank_filter=entry.rank_filter,
                     tier=entry.tier,
                     score=entry.score,
                     patch=entry.patch,

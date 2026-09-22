@@ -46,6 +46,7 @@ class HeroStatsData(ProviderDTO):
 class MetaEntryData(ProviderDTO):
     hero_slug: str
     lane: Lane
+    rank_filter: RankFilter = RankFilter.ALL
     tier: Tier
     score: float = Field(ge=0.0, le=100.0)
     patch: str

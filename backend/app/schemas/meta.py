@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import Lane, Tier
+from app.models.enums import Lane, RankFilter, Tier
 from app.schemas.hero import HeroRead
 
 
@@ -29,9 +29,10 @@ class MetaEntry(BaseModel):
 
 
 class MetaResponse(BaseModel):
-    """Tier list de uma ou de todas as lanes."""
+    """Tier list de uma ou de todas as lanes, numa faixa de ranque."""
 
     lane: Lane | None = None
+    rank_filter: RankFilter = RankFilter.ALL
     patch: str | None = None
     collected_at: datetime | None = None
     previous_collected_at: datetime | None = None

@@ -72,8 +72,13 @@ class MLBBDataProvider(ABC):
         *,
         lane: Lane | None = None,
         patch: str | None = None,
+        rank_filter: RankFilter = RankFilter.ALL,
     ) -> list[MetaEntryData]:
-        """Tier list por lane. `lane=None` retorna todas as lanes."""
+        """Tier list por lane e faixa de ranque.
+
+        O meta muda bastante entre faixas: um heroi dominante em Gloria pode
+        ser irrelevante no agregado geral. `lane=None` retorna todas as lanes.
+        """
 
     def get_hero_relations(self) -> list[HeroRelationData]:
         """Contra quem cada heroi vai bem, mal, e com quem combina. Opcional."""

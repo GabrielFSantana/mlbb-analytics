@@ -30,32 +30,53 @@ class MetaService:
         self.meta = MetaRepository(db)
         self.stats = HeroStatsRepository(db)
 
-    def get_meta(self, *, lane: Lane | None = None, limit: int | None = None) -> MetaResponse:
+    def get_meta(
+        self,
+        *,
+        lane: Lane | None = None,
+        limit: int | None = None,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> MetaResponse:
         provider = get_provider()
         # Todas as consultas ficam presas a fonte da coleta mais recente:
         # misturar fontes (ex.: logo apos trocar de provider) produziria
         # tendencias comparando dado real com dado de demonstracao.
         fonte = self.meta.latest_source()
-        latest_at = self.meta.latest_collected_at(lane=lane, source=fonte)
+        latest_at = self.meta.latest_collected_at(
+            lane=lane, source=fonte, rank_filter=rank_filter
+        )
 
         if latest_at is None:
             # Banco ainda sem coleta: resposta vazia e honesta, nao um erro.
             return MetaResponse(
                 lane=lane,
+                rank_filter=rank_filter,
                 source=provider.name,
                 is_mock=provider.is_mock,
                 entries=[],
             )
 
-        previous_at = self.meta.previous_collected_at(latest_at, lane=lane, source=fonte)
-        current = self.meta.list_at(latest_at, lane=lane, source=fonte)
+        previous_at = self.meta.previous_collected_at(
+            latest_at, lane=lane, source=fonte, rank_filter=rank_filter
+        )
+        current = self.meta.list_at(
+            latest_at, lane=lane, source=fonte, rank_filter=rank_filter
+        )
         previous_index = self._index_by_hero_lane(
-            self.meta.list_at(previous_at, lane=lane, source=fonte, with_hero=False)
+            self.meta.list_at(
+                previous_at,
+                lane=lane,
+                source=fonte,
+                rank_filter=rank_filter,
+                with_hero=False,
+            )
             if previous_at
             else []
         )
-        win_rates = self._win_rate_index(latest_at)
-        previous_win_rates = self._win_rate_index(previous_at) if previous_at else {}
+        win_rates = self._win_rate_index(latest_at, rank_filter)
+        previous_win_rates = (
+            self._win_rate_index(previous_at, rank_filter) if previous_at else {}
+        )
 
         entries = [
             self._to_entry(snapshot, previous_index, win_rates, previous_win_rates)
@@ -69,6 +90,7 @@ class MetaService:
 
         return MetaResponse(
             lane=lane,
+            rank_filter=rank_filter,
             patch=current[0].patch if current else None,
             collected_at=latest_at,
             previous_collected_at=previous_at,
@@ -87,10 +109,14 @@ class MetaService:
     ) -> dict[tuple[int, str], MetaSnapshot]:
         return {(snapshot.hero_id, str(snapshot.lane)): snapshot for snapshot in snapshots}
 
-    def _win_rate_index(self, collected_at: datetime | None) -> dict[int, float]:
+    def _win_rate_index(
+        self,
+        collected_at: datetime | None,
+        rank_filter: RankFilter = RankFilter.ALL,
+    ) -> dict[int, float]:
         if collected_at is None:
             return {}
-        readings = self.stats.list_at(collected_at, rank_filter=RankFilter.ALL)
+        readings = self.stats.list_at(collected_at, rank_filter=rank_filter)
         return {reading.hero_id: reading.win_rate for reading in readings}
 
     def _to_entry(

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TimestampMixin
 from app.database.types import StrEnumType
-from app.models.enums import Lane, Tier
+from app.models.enums import Lane, RankFilter, Tier
 
 if TYPE_CHECKING:
     from app.models.hero import Hero
@@ -26,9 +26,14 @@ class MetaSnapshot(Base, TimestampMixin):
     __tablename__ = "meta_snapshots"
     __table_args__ = (
         UniqueConstraint(
-            "hero_id", "lane", "patch", "collected_at", name="uq_meta_snapshot_reading"
+            "hero_id",
+            "lane",
+            "rank_filter",
+            "patch",
+            "collected_at",
+            name="uq_meta_snapshot_reading",
         ),
-        Index("ix_meta_snapshots_lane_patch", "lane", "patch"),
+        Index("ix_meta_snapshots_lane_rank", "lane", "rank_filter"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -37,6 +42,9 @@ class MetaSnapshot(Base, TimestampMixin):
     )
 
     lane: Mapped[Lane] = mapped_column(StrEnumType(Lane, 20), nullable=False)
+    rank_filter: Mapped[RankFilter] = mapped_column(
+        StrEnumType(RankFilter, 20), nullable=False, default=RankFilter.ALL
+    )
     tier: Mapped[Tier] = mapped_column(StrEnumType(Tier, 5), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
 

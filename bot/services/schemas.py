@@ -36,6 +36,7 @@ class MetaEntry(ApiModel):
 
 class MetaResponse(ApiModel):
     lane: str | None = None
+    rank_filter: str = "all"
     patch: str | None = None
     collected_at: datetime | None = None
     previous_collected_at: datetime | None = None

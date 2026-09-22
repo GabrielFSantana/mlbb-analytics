@@ -344,13 +344,14 @@ class RoneArenaProvider(MLBBDataProvider):
         *,
         lane: Lane | None = None,
         patch: str | None = None,
+        rank_filter: RankFilter = RankFilter.ALL,
     ) -> list[MetaEntryData]:
         catalogo = self._catalog()
         alvo = patch or self.current_patch()
         coletado_em = self._collected_at()
 
         entradas: list[MetaEntryData] = []
-        for linha in self._rank_rows(RankFilter.ALL):
+        for linha in self._rank_rows(rank_filter):
             info = catalogo.get(linha.get("main_heroid"))
             if info is None:
                 continue
@@ -366,6 +367,7 @@ class RoneArenaProvider(MLBBDataProvider):
                     MetaEntryData(
                         hero_slug=slugify(info["name"]),
                         lane=hero_lane,
+                        rank_filter=rank_filter,
                         tier=score_to_tier(score),
                         score=score,
                         patch=alvo,

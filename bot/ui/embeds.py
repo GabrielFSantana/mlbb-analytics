@@ -40,6 +40,15 @@ TIER_EMOJI: dict[str, str] = {
     "D": "▫️",
 }
 
+RANK_LABELS: dict[str, str] = {
+    "all": "Todos os ranques",
+    "epic": "Epico",
+    "legend": "Lenda",
+    "mythic": "Mitico",
+    "honor": "Honra",
+    "glory": "Gloria",
+}
+
 COLOR_META = discord.Colour.from_rgb(240, 173, 78)
 COLOR_MOCK = discord.Colour.from_rgb(150, 150, 150)
 
@@ -91,7 +100,13 @@ def format_trend_line(entry: MetaEntry) -> str:
 def _footer(meta: MetaResponse) -> str:
     patch = meta.patch or "desconhecido"
     updated = _format_timestamp(meta.collected_at)
-    parts = [f"Patch: {patch}", f"Atualizado: {updated}", f"Fonte: {meta.source}"]
+    ranque = RANK_LABELS.get(meta.rank_filter, meta.rank_filter)
+    parts = [
+        f"Patch: {patch}",
+        f"Ranque: {ranque}",
+        f"Atualizado: {updated}",
+        f"Fonte: {meta.source}",
+    ]
     if meta.is_mock:
         parts.append("DADOS MOCK")
     return " • ".join(parts)

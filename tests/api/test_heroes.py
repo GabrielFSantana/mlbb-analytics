@@ -80,10 +80,23 @@ def test_busca_por_nome_com_espaco(client_seeded):
 
 def test_historico_de_stats_vem_do_mais_recente_para_o_mais_antigo(client_seeded):
     hero_id = client_seeded.get("/api/v1/heroes").json()["items"][0]["id"]
-    readings = client_seeded.get(f"/api/v1/heroes/{hero_id}/stats").json()
+    readings = client_seeded.get(
+        f"/api/v1/heroes/{hero_id}/stats", params={"rank_filter": "all"}
+    ).json()
 
-    assert len(readings) == 2, "o seed mock grava duas leituras por heroi"
+    assert len(readings) == 2, "o seed mock grava duas leituras por heroi e faixa"
     assert readings[0]["collected_at"] > readings[1]["collected_at"]
+
+
+def test_historico_cobre_todas_as_faixas_de_ranque(client_seeded):
+    """A coleta passou a guardar o meta por faixa, nao so o agregado."""
+    from app.services.sync_service import DEFAULT_RANK_FILTERS
+
+    hero_id = client_seeded.get("/api/v1/heroes").json()["items"][0]["id"]
+    readings = client_seeded.get(f"/api/v1/heroes/{hero_id}/stats", params={"limit": 200}).json()
+
+    faixas = {leitura["rank_filter"] for leitura in readings}
+    assert faixas == {f.value for f in DEFAULT_RANK_FILTERS}
 
 
 def test_stats_de_heroi_inexistente_retorna_404(client_seeded):

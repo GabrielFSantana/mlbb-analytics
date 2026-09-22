@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, status
 
 from app.api.deps import DbSession, MetaServiceDep
-from app.models.enums import Lane
+from app.models.enums import Lane, RankFilter
 from app.schemas.meta import MetaAnnouncementAck, MetaResponse, MetaUpdate
 from app.services.meta_update_service import MetaUpdateService
 
@@ -16,13 +16,16 @@ router = APIRouter(prefix="/meta", tags=["meta"])
 def get_meta(
     service: MetaServiceDep,
     limit: int | None = Query(default=None, ge=1, le=200),
+    rank: RankFilter = Query(
+        default=RankFilter.ALL, description="Faixa de ranque. `all` e o agregado geral."
+    ),
 ) -> MetaResponse:
     """Tier list consolidada da coleta mais recente.
 
     Enquanto a fonte configurada for de demonstracao, `is_mock` vem `true`:
     os consumidores devem sinalizar isso ao usuario final.
     """
-    return service.get_meta(limit=limit)
+    return service.get_meta(limit=limit, rank_filter=rank)
 
 
 # ATENCAO: as rotas de /updates precisam vir ANTES de /{lane}. O FastAPI
@@ -59,5 +62,6 @@ def get_meta_by_lane(
     lane: Lane,
     service: MetaServiceDep,
     limit: int | None = Query(default=None, ge=1, le=200),
+    rank: RankFilter = Query(default=RankFilter.ALL),
 ) -> MetaResponse:
-    return service.get_meta(lane=lane, limit=limit)
+    return service.get_meta(lane=lane, limit=limit, rank_filter=rank)

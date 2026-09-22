@@ -132,6 +132,7 @@ class MockDataProvider(MLBBDataProvider):
         *,
         lane: Lane | None = None,
         patch: str | None = None,
+        rank_filter: RankFilter = RankFilter.ALL,
     ) -> list[MetaEntryData]:
         data = self._data
         target_patch = patch or self.current_patch()
@@ -147,10 +148,19 @@ class MockDataProvider(MLBBDataProvider):
                 hero_lane = Lane(raw_lane)
                 if lane is not None and hero_lane != lane:
                     continue
-                entries.append(self._build_entry(hero, hero, hero_lane, current_at, target_patch))
                 entries.append(
                     self._build_entry(
-                        hero, hero["previous"], hero_lane, previous_at, target_patch
+                        hero, hero, hero_lane, current_at, target_patch, rank_filter
+                    )
+                )
+                entries.append(
+                    self._build_entry(
+                        hero,
+                        hero["previous"],
+                        hero_lane,
+                        previous_at,
+                        target_patch,
+                        rank_filter,
                     )
                 )
         return entries
@@ -162,11 +172,13 @@ class MockDataProvider(MLBBDataProvider):
         lane: Lane,
         collected_at: datetime,
         patch: str,
+        rank_filter: RankFilter = RankFilter.ALL,
     ) -> MetaEntryData:
         score = calculate_score(values["win_rate"], values["pick_rate"], values["ban_rate"])
         return MetaEntryData(
             hero_slug=hero["slug"],
             lane=lane,
+            rank_filter=rank_filter,
             tier=score_to_tier(score),
             score=score,
             patch=patch,

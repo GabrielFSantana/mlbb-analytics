@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.enums import Lane
+from app.models.enums import Lane, RankFilter
 from app.models.meta_snapshot import MetaSnapshot
 
 
@@ -31,6 +31,7 @@ class MetaRepository:
         *,
         lane: Lane | None = None,
         source: str | None = None,
+        rank_filter: RankFilter | None = None,
     ) -> datetime | None:
         """Timestamp da coleta mais recente (opcionalmente por lane e fonte)."""
         stmt = select(MetaSnapshot.collected_at).order_by(MetaSnapshot.collected_at.desc()).limit(1)
@@ -38,6 +39,8 @@ class MetaRepository:
             stmt = stmt.where(MetaSnapshot.lane == lane)
         if source is not None:
             stmt = stmt.where(MetaSnapshot.source == source)
+        if rank_filter is not None:
+            stmt = stmt.where(MetaSnapshot.rank_filter == rank_filter)
         return self.db.scalar(stmt)
 
     def previous_collected_at(
@@ -46,6 +49,7 @@ class MetaRepository:
         *,
         lane: Lane | None = None,
         source: str | None = None,
+        rank_filter: RankFilter | None = None,
     ) -> datetime | None:
         """Timestamp da coleta imediatamente anterior a `before`.
 
@@ -63,6 +67,8 @@ class MetaRepository:
             stmt = stmt.where(MetaSnapshot.lane == lane)
         if source is not None:
             stmt = stmt.where(MetaSnapshot.source == source)
+        if rank_filter is not None:
+            stmt = stmt.where(MetaSnapshot.rank_filter == rank_filter)
         return self.db.scalar(stmt)
 
     def list_at(
@@ -71,6 +77,7 @@ class MetaRepository:
         *,
         lane: Lane | None = None,
         source: str | None = None,
+        rank_filter: RankFilter | None = None,
         with_hero: bool = True,
     ) -> list[MetaSnapshot]:
         """Snapshots de uma coleta, ordenados do maior para o menor score."""
@@ -83,6 +90,8 @@ class MetaRepository:
             stmt = stmt.where(MetaSnapshot.lane == lane)
         if source is not None:
             stmt = stmt.where(MetaSnapshot.source == source)
+        if rank_filter is not None:
+            stmt = stmt.where(MetaSnapshot.rank_filter == rank_filter)
         if with_hero:
             stmt = stmt.options(joinedload(MetaSnapshot.hero))
         return list(self.db.scalars(stmt))
@@ -94,10 +103,12 @@ class MetaRepository:
         lane: Lane,
         patch: str,
         collected_at: datetime,
+        rank_filter: RankFilter = RankFilter.ALL,
     ) -> bool:
         stmt = select(MetaSnapshot.id).where(
             MetaSnapshot.hero_id == hero_id,
             MetaSnapshot.lane == lane,
+            MetaSnapshot.rank_filter == rank_filter,
             MetaSnapshot.patch == patch,
             MetaSnapshot.collected_at == collected_at,
         )

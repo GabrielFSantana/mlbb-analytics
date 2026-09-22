@@ -248,8 +248,8 @@ deve ser commitado.
 | GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
 | GET | `/api/v1/builds/{termo}` | Builds recomendadas. Aceita `lane` e `rank_filter`. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
-| GET | `/api/v1/meta` | Tier list de todas as lanes. |
-| GET | `/api/v1/meta/{lane}` | Tier list de uma lane (`jungle`, `gold`, `mid`, `exp`, `roam`). |
+| GET | `/api/v1/meta` | Tier list de todas as lanes. Aceita `rank`. |
+| GET | `/api/v1/meta/{lane}` | Tier list de uma lane. Aceita `rank`. |
 | GET | `/api/v1/meta/updates/pending` | Atualização ainda não publicada (usada pelo bot). |
 | POST | `/api/v1/meta/updates/ack` | Confirma que uma atualização foi publicada. |
 | GET | `/api/v1/patches` | Lista de patches. |
@@ -262,7 +262,7 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | Comando | Status |
 |---|---|
 | `/meta` | ✅ Fase 1 — tier list de todas as lanes |
-| `/meta lane:<jungle\|gold\|mid\|exp\|roam>` | ✅ Fase 1 |
+| `/meta lane:<...> ranque:<...>` | ✅ — tier list por lane e por faixa de ranque |
 | `/hero <nome>` | ✅ Fase 3b — classe, win/pick/ban e posição no meta por lane |
 | `/counter <nome>` | ✅ Fase 3b — forte contra, fraco contra, combina com |
 | `/build <herói> [lane]` | ✅ Fase 3c — itens centrais, emblema e feitiço mais usados |
@@ -312,6 +312,22 @@ rate no período.
 > Ao escalar a API para mais de um worker, mova o agendador para um processo próprio —
 > senão cada worker terá o seu. A escrita é idempotente, então o efeito seria
 > desperdício de chamadas à fonte, não dado corrompido.
+
+## Meta por faixa de ranque
+
+O meta muda conforme o ranque: na coleta de hoje, **Hirara** lidera a selva no agregado
+geral, **Sun** em Mítico e **Yi Sun-shin** em Glória. Responder "como está o meta" sem
+dizer *em qual ranque* esconde essa diferença.
+
+A coleta guarda as seis faixas que a fonte expõe (`all`, `epic`, `legend`, `mythic`,
+`honor`, `glory`) — uma requisição por faixa, por dia. No Discord:
+
+```
+/meta lane:Jungle ranque:Mítico
+```
+
+Snapshots de faixas diferentes nunca se misturam: o cálculo de tendência compara
+sempre a mesma fonte **e** a mesma faixa.
 
 ## Builds: coleta sob demanda
 
