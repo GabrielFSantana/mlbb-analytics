@@ -91,6 +91,23 @@ def engine() -> Iterator[Engine]:
     engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def provider_fixo_em_mock(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Fixa o provider em `mock` para toda a suite.
+
+    Sem isso os testes herdam o MLBB_PROVIDER do `.env` da maquina: quando
+    ele aponta para a fonte real, asserts sobre `is_mock` quebram e, pior,
+    um teste poderia acabar fazendo chamada de rede de verdade. Os testes do
+    provider real instanciam a classe diretamente, com transporte falso.
+    """
+    from app.providers import factory
+
+    monkeypatch.setattr(settings, "mlbb_provider", "mock")
+    factory.get_provider.cache_clear()
+    yield
+    factory.get_provider.cache_clear()
+
+
 @pytest.fixture
 def db_session(engine: Engine) -> Iterator[Session]:
     """Sessao isolada: tudo que o teste escrever e revertido no fim."""

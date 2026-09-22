@@ -72,6 +72,10 @@ class MLBBDataProvider(ABC):
     ) -> list[MetaEntryData]:
         """Tier list por lane. `lane=None` retorna todas as lanes."""
 
+    def current_patch(self) -> str:
+        """Versao do jogo a que os dados desta fonte se referem."""
+        raise ProviderNotSupportedError(f"{self.name} nao informa o patch atual")
+
     def get_patches(self) -> list[PatchData]:
         """Patches conhecidos. Opcional."""
         raise ProviderNotSupportedError(f"{self.name} nao fornece patches")

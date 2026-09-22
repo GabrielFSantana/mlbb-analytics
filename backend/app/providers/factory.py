@@ -8,10 +8,12 @@ from app.core.config import settings
 from app.core.exceptions import ProviderError
 from app.providers.base import MLBBDataProvider
 from app.providers.mock import MockDataProvider
+from app.providers.rone_arena import RoneArenaProvider
 
 # Registre aqui novas implementacoes conforme forem aprovadas.
 PROVIDERS: dict[str, type[MLBBDataProvider]] = {
     MockDataProvider.name: MockDataProvider,
+    RoneArenaProvider.name: RoneArenaProvider,
 }
 
 

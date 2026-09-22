@@ -52,7 +52,6 @@ class MockDataProvider(MLBBDataProvider):
     def _data(self) -> dict[str, Any]:
         return _load_dataset(str(self._data_file))
 
-    @property
     def current_patch(self) -> str:
         return str(self._data["patch"])
 
@@ -80,11 +79,11 @@ class MockDataProvider(MLBBDataProvider):
         rank_filter: RankFilter = RankFilter.ALL,
     ) -> list[HeroStatsData]:
         data = self._data
-        target_patch = patch or self.current_patch
-        if target_patch != self.current_patch:
+        target_patch = patch or self.current_patch()
+        if target_patch != self.current_patch():
             logger.warning(
                 "mock provider nao possui o patch solicitado",
-                extra={"requested_patch": target_patch, "available": self.current_patch},
+                extra={"requested_patch": target_patch, "available": self.current_patch()},
             )
             return []
 
@@ -127,8 +126,8 @@ class MockDataProvider(MLBBDataProvider):
         patch: str | None = None,
     ) -> list[MetaEntryData]:
         data = self._data
-        target_patch = patch or self.current_patch
-        if target_patch != self.current_patch:
+        target_patch = patch or self.current_patch()
+        if target_patch != self.current_patch():
             return []
 
         current_at = datetime.fromisoformat(data["collected_at"])

@@ -1,0 +1,536 @@
+{
+ "code": 0,
+ "message": "OK",
+ "data": {
+  "records": [
+   {
+    "data": {
+     "hero": {
+      "data": {
+       "name": "Hirara",
+       "roadsort": [
+        {
+         "_id": "668541caaa8e7f6ec4703d8a",
+         "caption": "打野",
+         "configId": 144237,
+         "createdAt": 1720009162509,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2732073,
+          "road_sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/de611167c7310681135f0b4198137bfa.svg",
+          "road_sort_id": "4",
+          "road_sort_title": "Jungle"
+         },
+         "dynamic": null,
+         "id": 2732080,
+         "linkId": [
+          2732073
+         ],
+         "sort": 0,
+         "updatedAt": 1723022951463,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ],
+       "smallmap": "https://akmweb.youngjoygame.com/web/svnres/img/test/homepage_2_2_16_1232_1/100_ec67aa6f87226cceb794b3786d14c902.png",
+       "sortid": [
+        {
+         "_id": "6698bffd613093b976b4a970",
+         "caption": "3刺客",
+         "configId": 144237,
+         "createdAt": 1721286653803,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/d0b8b65a47fc43dc7bb2bac447072fd2.png",
+          "sort_id": "3",
+          "sort_title": "assassin"
+         },
+         "dynamic": null,
+         "id": 2740661,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023131050,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ]
+      }
+     },
+     "hero_id": 133,
+     "relation": {
+      "assist": {
+       "target_hero_id": [
+        55,
+        19
+       ]
+      },
+      "strong": {
+       "target_hero_id": [
+        52,
+        121,
+        113,
+        56
+       ]
+      },
+      "weak": {
+       "target_hero_id": [
+        3,
+        24
+       ]
+      }
+     }
+    },
+    "id": 3309114
+   },
+   {
+    "data": {
+     "hero": {
+      "data": {
+       "name": "Marcel",
+       "roadsort": [
+        {
+         "_id": "66854202aa8e7f6ec4703d8f",
+         "caption": "辅助",
+         "configId": 144237,
+         "createdAt": 1720009218480,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2732073,
+          "road_sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/a3dbb075b4d8186c29f02f7d47da236a.svg",
+          "road_sort_id": "3",
+          "road_sort_title": "Roam"
+         },
+         "dynamic": null,
+         "id": 2732083,
+         "linkId": [
+          2732073
+         ],
+         "sort": 0,
+         "updatedAt": 1723022949109,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ],
+       "smallmap": "https://akmweb.youngjoygame.com/web/svnres/img/test/homepage_2_2_16_1232_1/100_dd980a8816698f1503cdb76201d17dd0.png",
+       "sortid": [
+        {
+         "_id": "6698c06a613093b976b4a97c",
+         "caption": "6辅助",
+         "configId": 144237,
+         "createdAt": 1721286762785,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/1e4609b25a4cd63ee5a13015d4058159.png",
+          "sort_id": "6",
+          "sort_title": "support"
+         },
+         "dynamic": null,
+         "id": 2740666,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023113317,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ]
+      }
+     },
+     "hero_id": 132,
+     "relation": {
+      "assist": {
+       "target_hero_id": [
+        60,
+        121
+       ]
+      },
+      "strong": {
+       "target_hero_id": [
+        18,
+        38
+       ]
+      },
+      "weak": {
+       "target_hero_id": [
+        84,
+        83
+       ]
+      }
+     }
+    },
+    "id": 3280483
+   },
+   {
+    "data": {
+     "hero": {
+      "data": {
+       "name": "Sora",
+       "roadsort": [
+        {
+         "_id": "6685424caa8e7f6ec4703d97",
+         "caption": "经验路",
+         "configId": 144237,
+         "createdAt": 1720009292257,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2732073,
+          "road_sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/6a246099f7eb83a8856306d8b4c84fc2.svg",
+          "road_sort_id": "1",
+          "road_sort_title": "Exp Lane"
+         },
+         "dynamic": null,
+         "id": 2732085,
+         "linkId": [
+          2732073
+         ],
+         "sort": 0,
+         "updatedAt": 1723022932111,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ],
+       "smallmap": "https://akmweb.youngjoygame.com/web/svnres/img/test/homepage_2_2_16_1232_1/100_4749a1f7fe99cbedfc5ef23fc1287d6c.png",
+       "sortid": [
+        {
+         "_id": "6698bfe8613093b976b4a96c",
+         "caption": "2战士",
+         "configId": 144237,
+         "createdAt": 1721286632237,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/629e282165d4b63deceaf350426ea440.png",
+          "sort_id": "2",
+          "sort_title": "fighter"
+         },
+         "dynamic": null,
+         "id": 2740659,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023133206,
+         "updatedUser": "nickjin"
+        },
+        {
+         "_id": "6698bffd613093b976b4a970",
+         "caption": "3刺客",
+         "configId": 144237,
+         "createdAt": 1721286653803,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/d0b8b65a47fc43dc7bb2bac447072fd2.png",
+          "sort_id": "3",
+          "sort_title": "assassin"
+         },
+         "dynamic": null,
+         "id": 2740661,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023131050,
+         "updatedUser": "nickjin"
+        }
+       ]
+      }
+     },
+     "hero_id": 131,
+     "relation": {
+      "assist": {
+       "target_hero_id": [
+        41,
+        6,
+        19
+       ]
+      },
+      "strong": {
+       "target_hero_id": [
+        18,
+        1,
+        60
+       ]
+      },
+      "weak": {
+       "target_hero_id": [
+        57,
+        17,
+        120
+       ]
+      }
+     }
+    },
+    "id": 3245715
+   },
+   {
+    "data": {
+     "hero": {
+      "data": {
+       "name": "Obsidia",
+       "roadsort": [
+        {
+         "_id": "668541a2aa8e7f6ec4703d86",
+         "caption": "金币路",
+         "configId": 144237,
+         "createdAt": 1720009122589,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2732073,
+          "road_sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/91f817c656908a83c2e24eecb3b70986.svg",
+          "road_sort_id": "5",
+          "road_sort_title": "Gold Lane"
+         },
+         "dynamic": null,
+         "id": 2732079,
+         "linkId": [
+          2732073
+         ],
+         "sort": 0,
+         "updatedAt": 1723022953428,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ],
+       "smallmap": "https://akmweb.youngjoygame.com/web/svnres/img/test/homepage_2_2_16_1232_1/100_92bcc9ad2c4c8165a888d34f086a4d28.png",
+       "sortid": [
+        {
+         "_id": "6698c04f613093b976b4a978",
+         "caption": "5射手",
+         "configId": 144237,
+         "createdAt": 1721286735503,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/025c69a764924f4bac526a2662f1a0b9.png",
+          "sort_id": "5",
+          "sort_title": "Marksman"
+         },
+         "dynamic": null,
+         "id": 2740665,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023126452,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ]
+      }
+     },
+     "hero_id": 130,
+     "relation": {
+      "assist": {
+       "target_hero_id": [
+        55,
+        34
+       ]
+      },
+      "strong": {
+       "target_hero_id": [
+        21,
+        22,
+        47
+       ]
+      },
+      "weak": {
+       "target_hero_id": [
+        12,
+        18
+       ]
+      }
+     }
+    },
+    "id": 3131750
+   },
+   {
+    "data": {
+     "hero": {
+      "data": {
+       "name": "Zetian",
+       "roadsort": [
+        {
+         "_id": "66854225aa8e7f6ec4703d93",
+         "caption": "中路",
+         "configId": 144237,
+         "createdAt": 1720009253985,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2732073,
+          "road_sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/facab1eacb218d767b5acb80304bfafd.svg",
+          "road_sort_id": "2",
+          "road_sort_title": "Mid Lane"
+         },
+         "dynamic": null,
+         "id": 2732084,
+         "linkId": [
+          2732073
+         ],
+         "sort": 0,
+         "updatedAt": 1723022943932,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ],
+       "smallmap": "https://akmweb.youngjoygame.com/web/svnres/img/test/homepage_2_2_16_1232_1/100_22dc8b16ea98a735027c3141b74ef841.png",
+       "sortid": [
+        {
+         "_id": "6698c015613093b976b4a974",
+         "caption": "4法师",
+         "configId": 144237,
+         "createdAt": 1721286677393,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/1c6985dd0caec2028ccb6d1b8ca95e0f.png",
+          "sort_id": "4",
+          "sort_title": "mage"
+         },
+         "dynamic": null,
+         "id": 2740663,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023128824,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ]
+      }
+     },
+     "hero_id": 129,
+     "relation": {
+      "assist": {
+       "target_hero_id": [
+        112,
+        14
+       ]
+      },
+      "strong": {
+       "target_hero_id": [
+        2,
+        16
+       ]
+      },
+      "weak": {
+       "target_hero_id": [
+        110
+       ]
+      }
+     }
+    },
+    "id": 3054554
+   },
+   {
+    "data": {
+     "hero": {
+      "data": {
+       "name": "Kalea",
+       "roadsort": [
+        {
+         "_id": "66854202aa8e7f6ec4703d8f",
+         "caption": "辅助",
+         "configId": 144237,
+         "createdAt": 1720009218480,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2732073,
+          "road_sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/a3dbb075b4d8186c29f02f7d47da236a.svg",
+          "road_sort_id": "3",
+          "road_sort_title": "Roam"
+         },
+         "dynamic": null,
+         "id": 2732083,
+         "linkId": [
+          2732073
+         ],
+         "sort": 0,
+         "updatedAt": 1723022949109,
+         "updatedUser": "nickjin"
+        },
+        ""
+       ],
+       "smallmap": "https://akmweb.youngjoygame.com/web/svnres/img/test/homepage_2_2_16_1232_1/100_9c5f2904026ba88b7aba8c9b2722f4ad.png",
+       "sortid": [
+        {
+         "_id": "6698c06a613093b976b4a97c",
+         "caption": "6辅助",
+         "configId": 144237,
+         "createdAt": 1721286762785,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/1e4609b25a4cd63ee5a13015d4058159.png",
+          "sort_id": "6",
+          "sort_title": "support"
+         },
+         "dynamic": null,
+         "id": 2740666,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023113317,
+         "updatedUser": "nickjin"
+        },
+        {
+         "_id": "6698bfe8613093b976b4a96c",
+         "caption": "2战士",
+         "configId": 144237,
+         "createdAt": 1721286632237,
+         "createdUser": "nickjin",
+         "data": {
+          "_object": 2740651,
+          "sort_icon": "https://akmweb.youngjoygame.com/web/gms/image/629e282165d4b63deceaf350426ea440.png",
+          "sort_id": "2",
+          "sort_title": "fighter"
+         },
+         "dynamic": null,
+         "id": 2740659,
+         "linkId": [
+          2740651
+         ],
+         "sort": 0,
+         "updatedAt": 1723023133206,
+         "updatedUser": "nickjin"
+        }
+       ]
+      }
+     },
+     "hero_id": 128,
+     "relation": {
+      "assist": {
+       "target_hero_id": [
+        15,
+        42,
+        13
+       ]
+      },
+      "strong": {
+       "target_hero_id": [
+        18,
+        61
+       ]
+      },
+      "weak": {
+       "target_hero_id": [
+        48,
+        19
+       ]
+      }
+     }
+    },
+    "id": 2863075
+   }
+  ],
+  "total": 6
+ },
+ "traceID": null
+}

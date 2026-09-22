@@ -28,7 +28,19 @@ WIN_RATE_FLOOR = 0.42
 WIN_RATE_CEILING = 0.58
 
 # Valores a partir dos quais consideramos o componente saturado (= 1.0).
-PICK_RATE_SATURATION = 0.15
+#
+# CALIBRACAO (2026-09-22, patch 2.1.18, janela de 7 dias, 133 herois da
+# fonte rone_arena). Medido na distribuicao real:
+#   pick_rate: min 0,05%  mediana 0,63%  max 3,19%
+#   ban_rate : min 0,04%  mediana 1,24%  max 58,69%
+#
+# O pick rate da fonte e a participacao por vaga, nao a chance de escolha
+# por partida: com 133 herois e 10 vagas, a media fica perto de 0,75%. Por
+# isso a saturacao e 3%, e nao um valor "intuitivo" como 15% - que zerava
+# na pratica o componente e jogava 90 de 165 entradas no tier D.
+#
+# Recalibre com dados reais sempre que a fonte mudar de metodologia.
+PICK_RATE_SATURATION = 0.03
 BAN_RATE_SATURATION = 0.50
 
 WEIGHT_WIN_RATE = 0.55
@@ -36,12 +48,16 @@ WEIGHT_PICK_RATE = 0.25
 WEIGHT_BAN_RATE = 0.20
 
 # Score minimo (inclusive) de cada tier, do mais forte para o mais fraco.
+#
+# Derivados dos percentis da mesma amostra real acima (S+ = top 5%,
+# S = top 15%, A = top 35%, B = top 60%, C = top 85%), o que produz uma
+# piramide com topo estreito em vez de uma lista onde quase todos sao D.
 TIER_THRESHOLDS: tuple[tuple[Tier, float], ...] = (
-    (Tier.S_PLUS, 78.0),
-    (Tier.S, 66.0),
-    (Tier.A, 54.0),
-    (Tier.B, 42.0),
-    (Tier.C, 30.0),
+    (Tier.S_PLUS, 63.0),
+    (Tier.S, 50.0),
+    (Tier.A, 39.0),
+    (Tier.B, 31.0),
+    (Tier.C, 22.0),
     (Tier.D, 0.0),
 )
 

@@ -32,7 +32,11 @@ class MetaService:
 
     def get_meta(self, *, lane: Lane | None = None, limit: int | None = None) -> MetaResponse:
         provider = get_provider()
-        latest_at = self.meta.latest_collected_at(lane=lane)
+        # Todas as consultas ficam presas a fonte da coleta mais recente:
+        # misturar fontes (ex.: logo apos trocar de provider) produziria
+        # tendencias comparando dado real com dado de demonstracao.
+        fonte = self.meta.latest_source()
+        latest_at = self.meta.latest_collected_at(lane=lane, source=fonte)
 
         if latest_at is None:
             # Banco ainda sem coleta: resposta vazia e honesta, nao um erro.
@@ -43,10 +47,12 @@ class MetaService:
                 entries=[],
             )
 
-        previous_at = self.meta.previous_collected_at(latest_at, lane=lane)
-        current = self.meta.list_at(latest_at, lane=lane)
+        previous_at = self.meta.previous_collected_at(latest_at, lane=lane, source=fonte)
+        current = self.meta.list_at(latest_at, lane=lane, source=fonte)
         previous_index = self._index_by_hero_lane(
-            self.meta.list_at(previous_at, lane=lane, with_hero=False) if previous_at else []
+            self.meta.list_at(previous_at, lane=lane, source=fonte, with_hero=False)
+            if previous_at
+            else []
         )
         win_rates = self._win_rate_index(latest_at)
         previous_win_rates = self._win_rate_index(previous_at) if previous_at else {}

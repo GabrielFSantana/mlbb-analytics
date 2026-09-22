@@ -1,0 +1,100 @@
+{
+ "code": 0,
+ "message": "OK",
+ "data": {
+  "records": [
+   {
+    "createdAt": 1759044257232,
+    "data": {
+     "game_version": "2.1.18"
+    },
+    "form": {
+     "id": 2777742
+    },
+    "id": 967057876869504,
+    "uin": "+JfvoXeGPIOnE8Iitcc6wg",
+    "updatedAt": 1759044257232,
+    "vote_all": {
+     "target": "967057876869504",
+     "vote": {
+      "id": 2758890
+     }
+    }
+   },
+   {
+    "createdAt": 1750823236506,
+    "data": {
+     "game_version": "1.9.90"
+    },
+    "form": {
+     "id": 2777742
+    },
+    "id": 899711275080960,
+    "uin": "+JfvoXeGPIOnE8Iitcc6wg",
+    "updatedAt": 1759044257232,
+    "vote_all": {
+     "target": "899711275080960",
+     "vote": {
+      "id": 2758890
+     }
+    }
+   },
+   {
+    "createdAt": 1742541110282,
+    "data": {
+     "game_version": "1.9.64"
+    },
+    "form": {
+     "id": 2777742
+    },
+    "id": 831864097043456,
+    "uin": "+JfvoXeGPIOnE8Iitcc6wg",
+    "updatedAt": 1759044257232,
+    "vote_all": {
+     "target": "831864097043456",
+     "vote": {
+      "id": 2758890
+     }
+    }
+   },
+   {
+    "createdAt": 1734940079450,
+    "data": {
+     "game_version": "1.9.42"
+    },
+    "form": {
+     "id": 2777742
+    },
+    "id": 769596452465600,
+    "uin": "+JfvoXeGPIOnE8Iitcc6wg",
+    "updatedAt": 1759044257232,
+    "vote_all": {
+     "target": "769596452465600",
+     "vote": {
+      "id": 2758890
+     }
+    }
+   },
+   {
+    "createdAt": 1729234168276,
+    "data": {
+     "game_version": "1.9.21"
+    },
+    "form": {
+     "id": 2777742
+    },
+    "id": 722853628140801,
+    "uin": "+JfvoXeGPIOnE8Iitcc6wg",
+    "updatedAt": 1759044257232,
+    "vote_all": {
+     "target": "722853628140801",
+     "vote": {
+      "id": 2758890
+     }
+    }
+   }
+  ],
+  "total": 5
+ },
+ "traceID": null
+}

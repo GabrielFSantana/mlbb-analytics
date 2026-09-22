@@ -46,20 +46,20 @@ def test_win_rate_pesa_mais_que_ban_rate():
 
 def test_pick_rate_satura():
     """Acima da saturacao, mais pick rate nao muda o score."""
-    assert calculate_score(0.50, 0.15, 0.10) == calculate_score(0.50, 0.90, 0.10)
+    assert calculate_score(0.50, 0.03, 0.10) == calculate_score(0.50, 0.90, 0.10)
 
 
 @pytest.mark.parametrize(
     ("score", "esperado"),
     [
         (100.0, Tier.S_PLUS),
-        (78.0, Tier.S_PLUS),
-        (77.9, Tier.S),
-        (66.0, Tier.S),
-        (54.0, Tier.A),
-        (42.0, Tier.B),
-        (30.0, Tier.C),
-        (29.9, Tier.D),
+        (63.0, Tier.S_PLUS),
+        (62.9, Tier.S),
+        (50.0, Tier.S),
+        (39.0, Tier.A),
+        (31.0, Tier.B),
+        (22.0, Tier.C),
+        (21.9, Tier.D),
         (0.0, Tier.D),
     ],
 )

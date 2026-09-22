@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     # Fonte de dados MLBB. Ver app/providers/factory.py.
     mlbb_provider: str = "mock"
 
+    # --- Fonte comunitaria (provider "rone_arena") --------------------
+    mlbb_api_base_url: str = "https://arena.rone.dev"
+    mlbb_api_timeout: float = 30.0
+    # Janela agregada das estatisticas. A fonte aceita 1, 3, 7, 15 ou 30.
+    # 7 dias equilibra reagir a mudanca de patch e nao oscilar com ruido.
+    mlbb_stats_window_days: int = 7
+    # Cache curto: evita repetir a mesma chamada dentro de uma sincronizacao
+    # sem congelar o dado entre execucoes.
+    mlbb_api_cache_seconds: float = 300.0
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

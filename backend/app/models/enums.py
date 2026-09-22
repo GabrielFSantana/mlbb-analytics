@@ -53,10 +53,15 @@ TIER_ORDER: tuple[Tier, ...] = (
 
 
 class RankFilter(StrEnum):
-    """Faixa de ranque a que uma estatistica se refere."""
+    """Faixa de ranque a que uma estatistica se refere.
+
+    Os valores espelham as faixas que a fonte de dados expoe, para que a
+    traducao entre fonte e dominio seja direta.
+    """
 
     ALL = "all"
     EPIC = "epic"
     LEGEND = "legend"
     MYTHIC = "mythic"
-    MYTHICAL_GLORY = "mythical_glory"
+    HONOR = "honor"
+    GLORY = "glory"

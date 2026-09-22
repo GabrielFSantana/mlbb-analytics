@@ -7,15 +7,35 @@ ponta a ponta com dados de demonstração.
 > ### ⚠️ Sobre a origem dos dados
 >
 > A Moonton **não publica uma API oficial** adequada a este tipo de aplicação.
-> Nenhum endpoint da Moonton foi inventado aqui, e não há scraping no código.
+> Nenhum endpoint da Moonton foi inventado aqui, e não há scraping de HTML.
 >
 > Todo acesso a dados passa pela interface [`MLBBDataProvider`](backend/app/providers/base.py).
-> A única implementação existente hoje é o `MockDataProvider`, cujos números são
-> **fictícios**. Isso é sinalizado em três lugares: no campo `is_mock` da API, no
-> `/health` e no rodapé dos embeds do Discord.
+> Existem duas implementações:
 >
-> Fontes reais só serão integradas depois de avaliação explícita de origem,
-> limitações técnicas, estabilidade e termos de uso.
+> | Provider | Dados | Quando usar |
+> |---|---|---|
+> | `rone_arena` | **Reais** | Operação normal. Padrão. |
+> | `mock` | **Fictícios** | Desenvolvimento offline e testes. |
+>
+> **O `rone_arena` não é oficial.** Ele consome a
+> [Rone Arena API](https://github.com/ridwaanhall/api-mobilelegends) (`arena.rone.dev`),
+> projeto comunitário open source (BSD 3-Clause) que reexpõe um endpoint interno da
+> Moonton — as imagens retornadas apontam para `akmweb.youngjoygame.com`, CDN da
+> própria Moonton. Os números são os verdadeiros do jogo, mas chegam por um caminho
+> que a Moonton **não documenta nem autoriza**.
+>
+> Riscos aceitos ao usar esse provider: pode ser bloqueado ou desligado sem aviso;
+> não há SLA nem rate limit documentado; os termos citados pelo mantenedor
+> ("publicly available content, for educational, analytical and community purposes")
+> são a posição dele, **não** uma autorização da Moonton. Uso comercial não é
+> recomendado.
+>
+> **O que nos protege:** cada coleta vira uma linha no nosso banco. Se a fonte sair
+> do ar, mantemos todo o histórico já coletado e trocamos de provider sem tocar em
+> API, bot ou schema.
+>
+> Com o provider `mock`, os dados fictícios são sinalizados em quatro lugares: campo
+> `is_mock` da API, `/health`, descrição e rodapé dos embeds.
 
 ---
 
@@ -117,7 +137,7 @@ docker compose up -d --build
 ```
 
 Isso sobe três containers: `postgres`, `backend` (que aplica as migrations no boot)
-e `bot`. Em seguida, popule o banco com os dados de demonstração:
+e `bot`. Em seguida, faça a primeira coleta de dados:
 
 ```bash
 docker compose exec backend python -m app.cli sync
@@ -203,7 +223,11 @@ deve ser commitado.
 | `DISCORD_GUILD_ID` | recomendada | ID do servidor. Faz os slash commands aparecerem na hora. |
 | `DISCORD_META_CHANNEL_ID` | não | Canal de atualizações automáticas (Fase 2). |
 | `BACKEND_API_URL` | sim | URL da API vista pelo bot. |
-| `MLBB_PROVIDER` | sim | Fonte de dados. Hoje só `mock`. |
+| `MLBB_PROVIDER` | sim | `rone_arena` (dados reais) ou `mock` (fictícios). |
+| `MLBB_API_BASE_URL` | não | Base da fonte comunitária. Padrão `https://arena.rone.dev`. |
+| `MLBB_STATS_WINDOW_DAYS` | não | Janela agregada: 1, 3, 7, 15 ou 30 dias. Padrão 7. |
+| `MLBB_API_TIMEOUT` | não | Timeout das chamadas à fonte, em segundos. |
+| `MLBB_API_CACHE_SECONDS` | não | Cache curto, evita repetir chamadas na mesma coleta. |
 | `APP_ENV` | não | `development` \| `staging` \| `production`. Em produção o log sai em JSON. |
 | `LOG_LEVEL` | não | `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 
@@ -259,12 +283,21 @@ score = 100 × (0.55 × win_rate_norm + 0.25 × pick_rate_norm + 0.20 × ban_rat
 ```
 
 - `win_rate_norm`: win rate normalizada na faixa 42%–58%.
-- `pick_rate_norm`: pick rate saturando em 15%.
+- `pick_rate_norm`: pick rate saturando em **3%**.
 - `ban_rate_norm`: ban rate saturando em 50%.
 
-Tiers: S+ ≥ 78 · S ≥ 66 · A ≥ 54 · B ≥ 42 · C ≥ 30 · D < 30.
+Tiers: S+ ≥ 63 · S ≥ 50 · A ≥ 39 · B ≥ 31 · C ≥ 22 · D < 22.
 
-Mudar pesos ou limiares muda os tiers históricos — trate como mudança de contrato.
+**Calibração.** As constantes foram medidas contra a distribuição real (patch 2.1.18,
+133 heróis, janela de 7 dias): pick rate vai de 0,05% a 3,19% (mediana 0,63%) e ban
+rate de 0,04% a 58,69% (mediana 1,24%). O pick rate da fonte é participação por vaga,
+não chance de escolha por partida — com 133 heróis e 10 vagas, a média fica perto de
+0,75%. Uma saturação "intuitiva" de 15% zerava o componente na prática e jogava 90 de
+165 entradas no tier D. Os limiares saem dos percentis da mesma amostra (S+ = top 5%,
+S = top 15%, A = top 35%, B = top 60%, C = top 85%), produzindo uma pirâmide.
+
+Recalibre com dados reais se a fonte mudar de metodologia. Mudar pesos ou limiares
+altera os tiers históricos — trate como mudança de contrato e recompute os snapshots.
 
 Fórmulas do próprio jogo (dano, escalonamento de itens etc.) **não serão inventadas**:
 só entram no Build Simulator com fonte documentada ou cadastro explícito.
@@ -275,7 +308,8 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 |---|---|---|
 | 1 | Estrutura, API, Postgres, Alembic, Docker, `/health`, heroes, meta, bot `/meta` | ✅ |
 | 2 | Job periódico (APScheduler), histórico, publicação automática em `#meta-updates` | ⏳ |
-| 3 | Avaliação e integração de fonte real; `/hero`, `/patch` | ⏳ |
+| 3 | Integração de fonte real de estatísticas | ✅ |
+| 3b | Comandos `/hero`, `/build`, `/patch` | ⏳ |
 | 4 | Player Tracking, Match History (`/player`, `/track`, `/compare`) | ⏳ |
 | 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |
 | 6 | Dashboard web | ⏳ |

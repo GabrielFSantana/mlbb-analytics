@@ -17,11 +17,27 @@ class MetaRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def latest_collected_at(self, *, lane: Lane | None = None) -> datetime | None:
-        """Timestamp da coleta mais recente (opcionalmente dentro de uma lane)."""
+    def latest_source(self) -> str | None:
+        """Fonte da coleta mais recente."""
+        stmt = (
+            select(MetaSnapshot.source)
+            .order_by(MetaSnapshot.collected_at.desc())
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
+    def latest_collected_at(
+        self,
+        *,
+        lane: Lane | None = None,
+        source: str | None = None,
+    ) -> datetime | None:
+        """Timestamp da coleta mais recente (opcionalmente por lane e fonte)."""
         stmt = select(MetaSnapshot.collected_at).order_by(MetaSnapshot.collected_at.desc()).limit(1)
         if lane is not None:
             stmt = stmt.where(MetaSnapshot.lane == lane)
+        if source is not None:
+            stmt = stmt.where(MetaSnapshot.source == source)
         return self.db.scalar(stmt)
 
     def previous_collected_at(
@@ -29,8 +45,14 @@ class MetaRepository:
         before: datetime,
         *,
         lane: Lane | None = None,
+        source: str | None = None,
     ) -> datetime | None:
-        """Timestamp da coleta imediatamente anterior a `before`."""
+        """Timestamp da coleta imediatamente anterior a `before`.
+
+        `source` importa: comparar coletas de fontes diferentes produziria
+        variacoes sem sentido (por exemplo, dado real contra dado de
+        demonstracao logo apos trocar de provider).
+        """
         stmt = (
             select(MetaSnapshot.collected_at)
             .where(MetaSnapshot.collected_at < before)
@@ -39,6 +61,8 @@ class MetaRepository:
         )
         if lane is not None:
             stmt = stmt.where(MetaSnapshot.lane == lane)
+        if source is not None:
+            stmt = stmt.where(MetaSnapshot.source == source)
         return self.db.scalar(stmt)
 
     def list_at(
@@ -46,6 +70,7 @@ class MetaRepository:
         collected_at: datetime,
         *,
         lane: Lane | None = None,
+        source: str | None = None,
         with_hero: bool = True,
     ) -> list[MetaSnapshot]:
         """Snapshots de uma coleta, ordenados do maior para o menor score."""
@@ -56,6 +81,8 @@ class MetaRepository:
         )
         if lane is not None:
             stmt = stmt.where(MetaSnapshot.lane == lane)
+        if source is not None:
+            stmt = stmt.where(MetaSnapshot.source == source)
         if with_hero:
             stmt = stmt.options(joinedload(MetaSnapshot.hero))
         return list(self.db.scalars(stmt))
