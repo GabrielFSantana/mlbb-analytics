@@ -493,6 +493,21 @@ mesmos itens** e diferirem só nos **talentos de emblema**. Sem exibir os talent
 três opções saíam idênticas na tela e o comando parecia quebrado. Os talentos agora
 aparecem em cada opção — resolvidos para nome via `/api/academy/emblems`.
 
+## Guia para o time
+
+[`docs/BiuBot-Guia-do-Time.pdf`](docs/BiuBot-Guia-do-Time.pdf) é um guia de 5 páginas
+escrito para os **jogadores**, não para quem mexe no código: o que digitar, quando usar
+cada comando, e — a parte que mais evita erro — como ler os números sem confundir
+frequência de citação com taxa de vitória.
+
+O gerador fica versionado junto ([`scripts/gerar-guia-pdf.py`](scripts/gerar-guia-pdf.py)):
+um PDF solto no repositório vira documentação que ninguém sabe atualizar. Quando um
+comando mudar, edite o script e rode de novo:
+
+```bash
+python scripts/gerar-guia-pdf.py docs/BiuBot-Guia-do-Time.pdf
+```
+
 ## Composição: sinergia medida, não inferida
 
 `/composicao Kagura, Tigreal, Beatrix, Fanny, Angela` responde uma pergunta que o
