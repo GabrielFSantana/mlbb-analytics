@@ -126,3 +126,4 @@ class HeroBuilds(ApiModel):
     collected_at: datetime | None = None
     source: str
     is_mock: bool = False
+    source_available: bool = True

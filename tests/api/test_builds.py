@@ -197,3 +197,38 @@ def test_rank_filter_e_respeitado(seeded_db):
     assert resposta.builds
     registros = seeded_db.query(HeroBuild).all()
     assert all(b.rank_filter is RankFilter.MYTHIC for b in registros)
+
+
+def test_fonte_indisponivel_e_distinguida_de_sem_build(seeded_db, monkeypatch):
+    """Regressao: fonte fora do ar dizia ao usuario que o heroi nao tem build.
+
+    Sao coisas diferentes, e a mensagem errada fez parecer bug do projeto
+    quando o problema estava na fonte.
+    """
+    from app.core.exceptions import ProviderError
+    from app.providers.mock import MockDataProvider
+
+    def explodir(self, *args, **kwargs):
+        raise ProviderError("upstream fora do ar")
+
+    monkeypatch.setattr(MockDataProvider, "get_hero_builds", explodir)
+    resposta = BuildService(seeded_db).get_builds("leomord")
+
+    assert resposta.builds == []
+    assert resposta.source_available is False
+
+
+def test_fonte_ok_sem_build_marca_disponivel(seeded_db, monkeypatch):
+    from app.providers.mock import MockDataProvider
+
+    monkeypatch.setattr(MockDataProvider, "get_hero_builds", lambda self, *a, **k: [])
+    resposta = BuildService(seeded_db).get_builds("leomord")
+
+    assert resposta.builds == []
+    assert resposta.source_available is True
+
+
+def test_consulta_bem_sucedida_marca_disponivel(seeded_db):
+    resposta = BuildService(seeded_db).get_builds("leomord")
+    assert resposta.builds
+    assert resposta.source_available is True

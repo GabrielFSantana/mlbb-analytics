@@ -48,3 +48,11 @@ class HeroBuildsResponse(BaseModel):
     collected_at: datetime | None = None
     source: str
     is_mock: bool = False
+    source_available: bool = Field(
+        default=True,
+        description=(
+            "False quando precisavamos consultar a fonte e ela falhou. Sem isso, "
+            "uma lista vazia por indisponibilidade seria indistinguivel de uma "
+            "lista vazia por nao existir build - e o usuario leria a mensagem errada."
+        ),
+    )

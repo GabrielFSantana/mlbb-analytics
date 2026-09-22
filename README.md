@@ -321,8 +321,12 @@ fonte comunitária sem rate limit documentado.
 
 Em vez disso, `/build <herói>` busca na hora, grava no banco e reaproveita o resultado
 por `BUILDS_CACHE_HOURS` (padrão 24h). Assim só gastamos requisição com heróis que as
-pessoas realmente consultam. Se a fonte estiver fora do ar, servimos o último dado
-conhecido com a data da coleta, em vez de devolver erro.
+pessoas realmente consultam.
+
+Se a fonte estiver fora do ar, servimos o último dado conhecido com a data da coleta.
+Quando não há dado guardado, a resposta traz `source_available: false` e o bot diz que
+a **fonte está indisponível** — e não que o herói não tem build. São causas diferentes,
+e confundi-las faz o usuário procurar um problema onde não há.
 
 Sem lane informada, o comando usa aquela em que o herói está mais forte na coleta mais
 recente.

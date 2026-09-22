@@ -368,9 +368,18 @@ def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
         embed.set_thumbnail(url=dados.hero.image_url)
 
     if not dados.builds:
+        # Nao confundir "a fonte disse que nao ha" com "nao consegui perguntar".
+        if dados.source_available:
+            motivo = "A fonte nao publicou builds para este heroi nesta lane."
+        else:
+            motivo = (
+                "A fonte de dados esta **indisponivel** no momento e ainda nao temos "
+                "build guardada deste heroi. Tente de novo mais tarde — os outros "
+                "comandos seguem funcionando com os dados ja coletados."
+            )
         embed.description = (
             f"{embed.description}\n\n" if embed.description else ""
-        ) + "A fonte nao publicou builds para este heroi nesta lane."
+        ) + motivo
         return embed
 
     # Mais usadas primeiro: e a pergunta real de quem digita /build.
@@ -390,14 +399,15 @@ def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
         )
         embed.add_field(name=f"Opcao {posicao}", value="\n".join(detalhes), inline=False)
 
-    embed.add_field(
-        name="ℹ️ Observacao",
-        value=(
-            "A fonte publica apenas os **itens centrais**, nao a build fechada de "
-            "seis. Complete conforme a partida."
-        ),
-        inline=False,
-    )
+    observacoes = [
+        "A fonte publica apenas os **itens centrais**, nao a build fechada de "
+        "seis. Complete conforme a partida."
+    ]
+    if not dados.source_available:
+        observacoes.append(
+            "⚠️ A fonte esta indisponivel agora; estes dados sao da ultima coleta."
+        )
+    embed.add_field(name="ℹ️ Observacao", value="\n".join(observacoes), inline=False)
 
     rodape = [f"Fonte: {dados.source}"]
     if dados.collected_at:

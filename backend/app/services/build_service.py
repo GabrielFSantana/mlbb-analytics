@@ -62,8 +62,9 @@ class BuildService:
                 is_mock=provider.is_mock,
             )
 
+        fonte_ok = True
         if self._precisa_atualizar(hero.id, alvo, rank_filter):
-            self._refresh(hero, alvo, rank_filter)
+            fonte_ok = self._refresh(hero, alvo, rank_filter)
 
         registros = self.builds.list_for_hero_lane(hero.id, alvo, rank_filter=rank_filter)
         provider = get_provider()
@@ -74,6 +75,7 @@ class BuildService:
             collected_at=registros[0].collected_at if registros else None,
             source=registros[0].source if registros else provider.name,
             is_mock=provider.is_mock,
+            source_available=fonte_ok,
         )
 
     # -- helpers --------------------------------------------------------
@@ -111,8 +113,13 @@ class BuildService:
         limite = datetime.now(UTC) - timedelta(hours=settings.builds_cache_hours)
         return buscado_em < limite
 
-    def _refresh(self, hero: Hero, lane: Lane, rank_filter: RankFilter) -> None:
-        """Busca na fonte e grava. Falha nao derruba a resposta."""
+    def _refresh(self, hero: Hero, lane: Lane, rank_filter: RankFilter) -> bool:
+        """Busca na fonte e grava.
+
+        Devolve False quando a fonte falhou, para quem chamou nao confundir
+        "nao existe build" com "nao consegui perguntar". A falha nunca vira
+        erro na cara do usuario: servimos o que ja houver.
+        """
         provider = get_provider()
         try:
             dados = provider.get_hero_builds(hero.slug, lane, rank_filter=rank_filter)
@@ -120,14 +127,13 @@ class BuildService:
             logger.info(
                 "provider nao fornece builds", extra={"provider": provider.name}
             )
-            return
+            return False
         except ProviderError as exc:
-            # Servimos o que ja temos em vez de devolver erro ao usuario.
             logger.warning(
-                "falha ao atualizar builds; servindo dado anterior se houver",
+                "falha ao consultar builds na fonte; servindo dado anterior se houver",
                 extra={"hero": hero.slug, "lane": lane.value, "error": str(exc)},
             )
-            return
+            return False
 
         indice = self.items.index_by_external_id()
         registros: list[HeroBuild] = []
@@ -165,6 +171,7 @@ class BuildService:
             "builds atualizadas",
             extra={"hero": hero.slug, "lane": lane.value, "builds": len(registros)},
         )
+        return True
 
     @staticmethod
     def _to_read(build: HeroBuild) -> HeroBuildRead:

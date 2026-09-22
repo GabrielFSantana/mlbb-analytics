@@ -8,6 +8,7 @@ import pytest
 
 from bot.services.schemas import (
     Hero,
+    HeroBuilds,
     HeroCounters,
     HeroDetail,
     MetaEntry,
@@ -17,6 +18,7 @@ from bot.services.schemas import (
 )
 from bot.ui.embeds import (
     MOCK_WARNING,
+    build_builds_embed,
     build_counters_embed,
     build_hero_embed,
     build_meta_embed,
@@ -320,3 +322,51 @@ def test_patch_embed():
 def test_patch_embed_sem_patch():
     embed = build_patch_embed(None)
     assert "coleta" in (embed.description or "")
+
+
+def test_build_embed_distingue_fonte_fora_de_sem_build():
+    """Mensagens diferentes para causas diferentes."""
+    sem_build = HeroBuilds.model_validate(
+        {
+            "hero": {"id": 1, "name": "Julian", "slug": "julian", "role": "mage"},
+            "lane": "jungle",
+            "builds": [],
+            "source": "rone_arena",
+            "is_mock": False,
+            "source_available": True,
+        }
+    )
+    embed = build_builds_embed(sem_build)
+    assert "nao publicou builds" in (embed.description or "")
+
+    fonte_fora = HeroBuilds.model_validate(
+        {**sem_build.model_dump(mode="json"), "source_available": False}
+    )
+    embed = build_builds_embed(fonte_fora)
+    assert "indisponivel" in (embed.description or "")
+    assert "nao publicou builds" not in (embed.description or "")
+
+
+def test_build_embed_avisa_dado_antigo_quando_fonte_esta_fora():
+    dados = HeroBuilds.model_validate(
+        {
+            "hero": {"id": 1, "name": "Leomord", "slug": "leomord", "role": "fighter"},
+            "lane": "jungle",
+            "builds": [
+                {
+                    "variant": 0,
+                    "win_rate": 0.58,
+                    "pick_rate": 0.16,
+                    "emblem": "Assassin",
+                    "battle_spell": "Retribution",
+                    "items": [{"name": "War Axe", "position": 0}],
+                }
+            ],
+            "source": "rone_arena",
+            "is_mock": False,
+            "source_available": False,
+        }
+    )
+    embed = build_builds_embed(dados)
+    observacao = next(f for f in embed.fields if f.name == "ℹ️ Observacao")
+    assert "indisponivel" in (observacao.value or "")
