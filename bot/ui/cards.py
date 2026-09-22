@@ -24,7 +24,13 @@ import httpx
 from PIL import Image, ImageDraw, ImageFont
 
 from bot.core.logging import get_logger
-from bot.services.schemas import HeroBuilds, HeroCounters, HeroDetail, MetaResponse
+from bot.services.schemas import (
+    DraftResponse,
+    HeroBuilds,
+    HeroCounters,
+    HeroDetail,
+    MetaResponse,
+)
 from bot.ui.embeds import (
     LANE_LABELS,
     RANK_LABELS,
@@ -717,10 +723,178 @@ async def render_build_card(dados: HeroBuilds) -> bytes | None:
     return await asyncio.to_thread(_compor_build, dados, imagens)
 
 
+
+
+# ---------------------------------------------------------------------
+# Card de draft
+# ---------------------------------------------------------------------
+
+RETRATO_DRAFT = 54
+ALTURA_CANDIDATO = 64
+
+
+def _linha_candidato(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    candidato,
+    x: int,
+    y: int,
+    retratos: dict[str, bytes],
+    *,
+    mostrar_lane: bool,
+) -> None:
+    fonte_nome = _carregar_fonte(FONTES_NEGRITO, 16)
+    fonte_motivo = _carregar_fonte(FONTES_REGULARES, 12)
+    fonte_tier = _carregar_fonte(FONTES_NEGRITO, 15)
+
+    dados = retratos.get(candidato.hero.image_url or "")
+    retrato = None
+    if dados:
+        try:
+            retrato = Image.open(io.BytesIO(dados)).convert("RGBA")
+            retrato = retrato.resize((RETRATO_DRAFT, RETRATO_DRAFT), Image.LANCZOS)
+        except OSError:  # pragma: no cover - imagem corrompida
+            retrato = None
+    if retrato is not None:
+        imagem.paste(retrato, (x, y), _mascara_arredondada(RETRATO_DRAFT, 10))
+    else:
+        desenho.rounded_rectangle(
+            (x, y, x + RETRATO_DRAFT, y + RETRATO_DRAFT), 10, fill=COR_BORDA
+        )
+
+    # Selo do tier colado no retrato.
+    cor_tier = CORES_TIER.get(candidato.tier, COR_TEXTO_FRACO)
+    tx = x + RETRATO_DRAFT + 12
+    largura_selo = max(30, int(fonte_tier.getlength(candidato.tier)) + 16)
+    desenho.rounded_rectangle((tx, y + 2, tx + largura_selo, y + 24), 6, fill=cor_tier)
+    desenho.text((tx + 8, y + 4), candidato.tier, font=fonte_tier, fill=(20, 22, 28))
+
+    desenho.text(
+        (tx + largura_selo + 10, y + 2),
+        candidato.hero.name,
+        font=fonte_nome,
+        fill=COR_TEXTO,
+    )
+
+    # O motivo e o que torna a sugestao seguivel; sem ele vira palpite.
+    motivos = []
+    if candidato.counters:
+        motivos.append("countera " + ", ".join(h.name for h in candidato.counters))
+    if candidato.synergies:
+        motivos.append("combina com " + ", ".join(h.name for h in candidato.synergies))
+    if candidato.countered_by:
+        motivos.append("perde para " + ", ".join(h.name for h in candidato.countered_by))
+    if mostrar_lane:
+        motivos.append(LANE_LABELS.get(candidato.lane, candidato.lane))
+    texto = " · ".join(motivos) or "sem relacao direta com o draft"
+    desenho.text(
+        (tx, y + 28), _encurtar(texto, fonte_motivo, 600), font=fonte_motivo, fill=COR_TEXTO_FRACO
+    )
+
+    # Score a direita.
+    score = f"{candidato.draft_score:.0f}"
+    fonte_score = _carregar_fonte(FONTES_NEGRITO, 22)
+    largura_score = fonte_score.getlength(score)
+    desenho.text(
+        (LARGURA - MARGEM - 30 - largura_score, y + 12), score, font=fonte_score, fill=COR_TEXTO
+    )
+
+
+def _compor_draft(dados: DraftResponse, retratos: dict[str, bytes]) -> bytes:
+    fonte_titulo = _carregar_fonte(FONTES_NEGRITO, 30)
+    fonte_sub = _carregar_fonte(FONTES_REGULARES, 14)
+    fonte_secao = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 13)
+
+    secoes = [
+        ("MELHORES PICKS", dados.suggestions, (255, 214, 82)),
+        ("COUNTERS DIRETOS", dados.counter_picks, COR_FORTE),
+    ]
+    secoes = [(titulo, itens, cor) for titulo, itens, cor in secoes if itens]
+
+    altura = MARGEM + 96
+    for _, itens, _cor in secoes:
+        altura += 28 + len(itens) * ALTURA_CANDIDATO + 12
+    if dados.unknown_terms:
+        altura += 28
+    altura += 44 + MARGEM
+
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+
+    x0 = MARGEM + 26
+    desenho.text((x0, MARGEM + 22), "ASSISTENTE DE DRAFT", font=fonte_titulo, fill=COR_TEXTO)
+
+    contexto = []
+    if dados.enemies:
+        contexto.append("Inimigos: " + ", ".join(h.name for h in dados.enemies))
+    if dados.allies:
+        contexto.append("Aliados: " + ", ".join(h.name for h in dados.allies))
+    if dados.lane:
+        contexto.append(LANE_LABELS.get(dados.lane, dados.lane))
+    contexto.append(RANK_LABELS.get(dados.rank_filter, dados.rank_filter))
+    desenho.text(
+        (x0, MARGEM + 60),
+        _encurtar(" · ".join(contexto), fonte_sub, LARGURA - 2 * x0),
+        font=fonte_sub,
+        fill=COR_TEXTO_FRACO,
+    )
+
+    y = MARGEM + 96
+    mostrar_lane = dados.lane is None
+    for titulo, itens, cor in secoes:
+        desenho.rounded_rectangle((x0, y + 2, x0 + 5, y + 16), 2, fill=cor)
+        desenho.text((x0 + 14, y), titulo, font=fonte_secao, fill=cor)
+        y += 28
+        for candidato in itens:
+            _linha_candidato(
+                imagem, desenho, candidato, x0, y, retratos, mostrar_lane=mostrar_lane
+            )
+            y += ALTURA_CANDIDATO
+        y += 12
+
+    if dados.unknown_terms:
+        # Erro de digitacao precisa aparecer no card, nao so na API: senao a
+        # pessoa le a recomendacao achando que o heroi foi considerado.
+        desenho.text(
+            (x0, y),
+            "Nao reconheci: " + ", ".join(dados.unknown_terms),
+            font=fonte_sub,
+            fill=(255, 160, 64),
+        )
+
+    partes = [f"Fonte: {dados.source}"]
+    if dados.patch:
+        partes.append(f"Patch {dados.patch}")
+    if dados.is_mock:
+        partes.append("DADOS MOCK")
+    desenho.text(
+        (x0, altura - MARGEM - 26), " · ".join(partes), font=fonte_rodape, fill=COR_TEXTO_FRACO
+    )
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_draft_card(dados: DraftResponse) -> bytes | None:
+    """Gera o PNG do draft. None quando nao ha nada a sugerir."""
+    if not dados.suggestions and not dados.counter_picks:
+        return None
+    candidatos = dados.suggestions + dados.counter_picks
+    urls = [c.hero.image_url for c in candidatos if c.hero.image_url]
+    retratos = await _baixar_retratos(urls)
+    return await asyncio.to_thread(_compor_draft, dados, retratos)
+
+
 __all__ = [
     "LANE_LABELS",
     "render_build_card",
     "render_counters_card",
+    "render_draft_card",
     "render_hero_card",
     "render_meta_card",
 ]

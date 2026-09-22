@@ -11,7 +11,13 @@ from datetime import UTC, datetime
 import pytest
 from PIL import Image
 
-from bot.services.schemas import HeroBuilds, HeroCounters, HeroDetail, MetaResponse
+from bot.services.schemas import (
+    DraftResponse,
+    HeroBuilds,
+    HeroCounters,
+    HeroDetail,
+    MetaResponse,
+)
 from bot.ui import cards
 
 
@@ -346,3 +352,67 @@ async def test_build_card_limita_as_variantes_exibidas():
 async def test_build_card_item_sem_icone_nao_quebra():
     """Endless Battle entra sem image_url no fixture: sai com placeholder."""
     assert await cards.render_build_card(builds()) is not None
+
+
+# -- card de draft ------------------------------------------------------
+
+
+def candidato(nome: str, tier: str, **extras: object) -> dict:
+    base = {
+        "hero": heroi_simples(nome),
+        "lane": "exp",
+        "tier": tier,
+        "meta_score": 60.0,
+        "draft_score": 67.0,
+        "counters": [],
+        "countered_by": [],
+        "synergies": [],
+    }
+    base.update(extras)
+    return base
+
+
+def draft(**overrides: object) -> DraftResponse:
+    base: dict[str, object] = {
+        "enemies": [heroi_simples("Leomord")],
+        "allies": [heroi_simples("Tigreal")],
+        "lane": "exp",
+        "rank_filter": "all",
+        "suggestions": [candidato("Paquito", "S+"), candidato("Gloo", "S")],
+        "counter_picks": [
+            candidato("Phoveus", "C", counters=[heroi_simples("Leomord")], draft_score=35.0)
+        ],
+        "unknown_terms": [],
+        "patch": "2.1.18",
+        "source": "rone_arena",
+        "is_mock": False,
+    }
+    base.update(overrides)
+    return DraftResponse.model_validate(base)
+
+
+async def test_draft_card_gera_png():
+    dados = await cards.render_draft_card(draft())
+    assert dados is not None
+    assert Image.open(io.BytesIO(dados)).width == cards.LARGURA
+
+
+async def test_draft_card_sem_nada_a_sugerir_nao_renderiza():
+    assert await cards.render_draft_card(draft(suggestions=[], counter_picks=[])) is None
+
+
+async def test_draft_card_cresce_com_as_secoes():
+    so_sugestoes = await cards.render_draft_card(draft(counter_picks=[]))
+    completo = await cards.render_draft_card(draft())
+
+    assert so_sugestoes is not None and completo is not None
+    assert Image.open(io.BytesIO(completo)).height > Image.open(io.BytesIO(so_sugestoes)).height
+
+
+async def test_draft_card_reserva_espaco_para_nomes_nao_reconhecidos():
+    """Regressao: o aviso precisa caber, senao sobrepoe o rodape."""
+    sem_aviso = await cards.render_draft_card(draft())
+    com_aviso = await cards.render_draft_card(draft(unknown_terms=["Leomordd"]))
+
+    assert sem_aviso is not None and com_aviso is not None
+    assert Image.open(io.BytesIO(com_aviso)).height > Image.open(io.BytesIO(sem_aviso)).height

@@ -247,6 +247,7 @@ deve ser commitado.
 | GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug. Aceita `rank`. |
 | GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
 | GET | `/api/v1/builds/{termo}` | Builds recomendadas. Aceita `lane` e `rank_filter`. |
+| GET | `/api/v1/draft/suggest` | Sugestões de pick. Aceita `enemy`, `ally`, `lane`, `rank`. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
 | GET | `/api/v1/meta` | Tier list de todas as lanes. Aceita `rank`. |
 | GET | `/api/v1/meta/{lane}` | Tier list de uma lane. Aceita `rank`. |
@@ -266,7 +267,8 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | `/hero <nome> [ranque] [formato]` | ✅ — ficha em **imagem** (padrão) ou texto |
 | `/counter <nome> [formato]` | ✅ — forte contra, fraco contra, combina com, em **imagem** |
 | `/build <herói> [lane] [formato]` | ✅ — itens centrais com ícones, emblema e feitiço, em **imagem** |
-| `/patch` | ✅ Fase 3b — patch vigente segundo a fonte |
+| `/draft inimigos:<...> [aliados] [lane] [ranque]` | ✅ — sugere picks e explica o porquê, em **imagem** |
+| `/patch` | ✅ — patch vigente segundo a fonte |
 | `/player`, `/track`, `/compare` | ⏳ Fase 4 |
 
 ## Testes
@@ -313,9 +315,33 @@ rate no período.
 > senão cada worker terá o seu. A escrita é idempotente, então o efeito seria
 > desperdício de chamadas à fonte, não dado corrompido.
 
+## Assistente de draft
+
+`/draft inimigos:Leomord, Kagura aliados:Tigreal lane:Exp` combina três sinais que já
+estão no banco numa recomendação **explicável**:
+
+1. **Meta** — o score do herói na lane e faixa escolhidas. É a base: um herói fraco no
+   patch não vira boa escolha só por counterar alguém.
+2. **Counter** — vantagem líquida contra o time inimigo. Conta os dois lados, e a
+   relação vale nos dois sentidos ("A é forte contra B" ou "B é fraco contra A").
+3. **Sinergia** — combina com quem o seu time já pegou.
+
+A fórmula é aditiva de propósito (`app/domain/draft.py`), não uma média ponderada:
+assim cada parcela é explicável na interface — "62 de meta, +16 por counterar dois,
++4 de sinergia". Uma média esconderia de onde veio o número, e recomendação que a
+pessoa não entende ela não segue.
+
+**Duas listas, duas perguntas.** "Melhores picks" responde *o que é bom pegar agora*;
+"counters diretos" responde *o que ganha desse herói específico* — e existe separado
+porque um counter de tier baixo nunca apareceria na lista geral, dominada pelo meta,
+sendo justamente ele que a pessoa foi procurar.
+
+Nomes que não casam com nenhum herói voltam em `unknown_terms` e aparecem no card: um
+erro de digitação não pode virar recomendação calculada em silêncio sem aquele herói.
+
 ## Cards em imagem
 
-`/meta`, `/hero`, `/counter` e `/build` respondem com um PNG gerado na hora.
+`/meta`, `/hero`, `/counter`, `/build` e `/draft` respondem com um PNG gerado na hora.
 
 O card do **meta** traz tiers como faixas coloridas e os retratos oficiais dos heróis
 (CDN da Moonton, pelas URLs que já guardamos). Uma tier list com trinta heróis vira

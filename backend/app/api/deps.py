@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.services.build_service import BuildService
+from app.services.draft_service import DraftService
 from app.services.hero_service import HeroService
 from app.services.meta_service import MetaService
 
@@ -17,6 +18,10 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 def get_build_service(db: DbSession) -> BuildService:
     return BuildService(db)
+
+
+def get_draft_service(db: DbSession) -> DraftService:
+    return DraftService(db)
 
 
 def get_hero_service(db: DbSession) -> HeroService:
@@ -28,5 +33,6 @@ def get_meta_service(db: DbSession) -> MetaService:
 
 
 BuildServiceDep = Annotated[BuildService, Depends(get_build_service)]
+DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
 HeroServiceDep = Annotated[HeroService, Depends(get_hero_service)]
 MetaServiceDep = Annotated[MetaService, Depends(get_meta_service)]

@@ -1,5 +1,6 @@
 from app.schemas.build import BuildItemRead, HeroBuildRead, HeroBuildsResponse
 from app.schemas.common import ErrorResponse, HealthResponse, PatchRead
+from app.schemas.draft import DraftCandidate, DraftResponse
 from app.schemas.hero import (
     HeroCounters,
     HeroLanePosition,
@@ -12,6 +13,8 @@ from app.schemas.hero import (
 from app.schemas.meta import MetaAnnouncementAck, MetaEntry, MetaResponse, MetaUpdate
 
 __all__ = [
+    "DraftCandidate",
+    "DraftResponse",
     "BuildItemRead",
     "HeroBuildRead",
     "HeroBuildsResponse",

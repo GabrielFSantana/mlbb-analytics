@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 EXTENSIONS: tuple[str, ...] = (
     "bot.commands.meta",
     "bot.commands.heroes",
+    "bot.commands.draft",
     "bot.commands.meta_updates",
 )
 

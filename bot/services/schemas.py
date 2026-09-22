@@ -129,3 +129,28 @@ class HeroBuilds(ApiModel):
     source: str
     is_mock: bool = False
     source_available: bool = True
+
+
+class DraftCandidate(ApiModel):
+    hero: Hero
+    lane: str
+    tier: str
+    meta_score: float
+    draft_score: float
+    counters: list[Hero] = []
+    countered_by: list[Hero] = []
+    synergies: list[Hero] = []
+
+
+class DraftResponse(ApiModel):
+    enemies: list[Hero] = []
+    allies: list[Hero] = []
+    lane: str | None = None
+    rank_filter: str = "all"
+    suggestions: list[DraftCandidate] = []
+    counter_picks: list[DraftCandidate] = []
+    unknown_terms: list[str] = []
+    collected_at: datetime | None = None
+    patch: str | None = None
+    source: str
+    is_mock: bool = False

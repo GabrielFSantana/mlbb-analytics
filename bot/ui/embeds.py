@@ -11,6 +11,8 @@ from datetime import datetime
 import discord
 
 from bot.services.schemas import (
+    DraftCandidate,
+    DraftResponse,
     HeroBuilds,
     HeroCounters,
     HeroDetail,
@@ -427,6 +429,80 @@ def build_builds_embed(dados: HeroBuilds) -> discord.Embed:
     rodape = [f"Fonte: {dados.source}"]
     if dados.collected_at:
         rodape.append(f"Coletado: {_format_timestamp(dados.collected_at)}")
+    if dados.is_mock:
+        rodape.append("DADOS MOCK")
+    embed.set_footer(text=" • ".join(rodape))
+    return embed
+
+
+def _linha_draft(candidato: DraftCandidate, *, mostrar_lane: bool) -> str:
+    motivos = []
+    if candidato.counters:
+        motivos.append("countera " + ", ".join(h.name for h in candidato.counters))
+    if candidato.synergies:
+        motivos.append("combina com " + ", ".join(h.name for h in candidato.synergies))
+    if candidato.countered_by:
+        motivos.append("perde para " + ", ".join(h.name for h in candidato.countered_by))
+    if mostrar_lane:
+        motivos.append(LANE_LABELS.get(candidato.lane, candidato.lane))
+    razao = " · ".join(motivos)
+    emoji = TIER_EMOJI.get(candidato.tier, "▫️")
+    linha = f"{emoji} **{candidato.hero.name}** ({candidato.tier}) — {candidato.draft_score:.0f}"
+    return f"{linha}\n_{razao}_" if razao else linha
+
+
+def build_draft_embed(dados: DraftResponse) -> discord.Embed:
+    """Alternativa em texto do card de draft."""
+    contexto = []
+    if dados.enemies:
+        contexto.append("**Inimigos:** " + ", ".join(h.name for h in dados.enemies))
+    if dados.allies:
+        contexto.append("**Aliados:** " + ", ".join(h.name for h in dados.allies))
+
+    embed = discord.Embed(
+        title="🧭 Assistente de draft",
+        colour=COLOR_MOCK if dados.is_mock else COLOR_META,
+        description="\n".join(contexto) or None,
+    )
+
+    if dados.unknown_terms:
+        # Antes das sugestoes: quem errou o nome precisa ver isso primeiro.
+        embed.add_field(
+            name="⚠️ Nao reconheci",
+            value=", ".join(dados.unknown_terms),
+            inline=False,
+        )
+
+    mostrar_lane = dados.lane is None
+    if dados.suggestions:
+        embed.add_field(
+            name="⭐ Melhores picks",
+            value="\n".join(
+                _linha_draft(c, mostrar_lane=mostrar_lane)
+                for c in dados.suggestions[:MAX_TREND_ENTRIES]
+            ),
+            inline=False,
+        )
+    if dados.counter_picks:
+        embed.add_field(
+            name="🎯 Counters diretos",
+            value="\n".join(
+                _linha_draft(c, mostrar_lane=mostrar_lane)
+                for c in dados.counter_picks[:MAX_TREND_ENTRIES]
+            ),
+            inline=False,
+        )
+    if not dados.suggestions and not dados.counter_picks:
+        embed.add_field(
+            name="Sem sugestoes",
+            value="Nao ha coleta de meta para essa lane e faixa ainda.",
+            inline=False,
+        )
+
+    rodape = [f"Fonte: {dados.source}"]
+    if dados.patch:
+        rodape.append(f"Patch {dados.patch}")
+    rodape.append(RANK_LABELS.get(dados.rank_filter, dados.rank_filter))
     if dados.is_mock:
         rodape.append("DADOS MOCK")
     embed.set_footer(text=" • ".join(rodape))

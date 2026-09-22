@@ -16,6 +16,7 @@ import httpx
 from bot.core.config import settings
 from bot.core.logging import get_logger
 from bot.services.schemas import (
+    DraftResponse,
     HeroBuilds,
     HeroCounters,
     HeroDetail,
@@ -118,6 +119,39 @@ class MLBBApiClient:
             params["lane"] = lane
         payload = await self._get(f"/api/v1/builds/{quote(termo)}", **params)
         return HeroBuilds.model_validate(payload)
+
+    async def get_draft(
+        self,
+        inimigos: list[str],
+        aliados: list[str] | None = None,
+        lane: str | None = None,
+        rank: str | None = None,
+    ) -> DraftResponse:
+        """Sugestoes de pick para o draft."""
+        if self._client is None:
+            await self.start()
+        assert self._client is not None
+
+        # Listas viram parametros repetidos: httpx cuida da codificacao.
+        params: list[tuple[str, str]] = [("enemy", nome) for nome in inimigos]
+        params += [("ally", nome) for nome in (aliados or [])]
+        if lane:
+            params.append(("lane", lane))
+        if rank:
+            params.append(("rank", rank))
+
+        try:
+            resposta = await self._client.get("/api/v1/draft/suggest", params=params)
+            resposta.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code >= 500:
+                raise BackendUnavailableError(
+                    f"API retornou {exc.response.status_code}"
+                ) from exc
+            raise BackendError(f"API retornou {exc.response.status_code}") from exc
+        except httpx.HTTPError as exc:
+            raise BackendUnavailableError(str(exc)) from exc
+        return DraftResponse.model_validate(resposta.json())
 
     async def get_current_patch(self) -> Patch | None:
         payload = await self._get("/api/v1/patches/current")
