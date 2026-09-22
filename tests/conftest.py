@@ -19,11 +19,11 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.config import settings
 from app.database.base import Base
 from app.database.session import CONNECT_ARGS
 from app.models import Hero, HeroStats, MetaSnapshot, Patch  # noqa: F401  registra as tabelas
 
-DEFAULT_URL = "postgresql+psycopg://mlbb:mlbb@localhost:5432/mlbb"
 TEST_DB_NAME = "mlbb_test"
 
 SKIP_REASON = (
@@ -33,11 +33,21 @@ SKIP_REASON = (
 
 
 def _test_database_url() -> str:
+    """URL do database de teste, derivada da mesma config da aplicacao.
+
+    Usar `settings` em vez de `os.getenv("DATABASE_URL")` importa: a variavel
+    normalmente mora no `.env`, nao no ambiente do SO. Lendo so do ambiente,
+    os testes caiam num default com credencial errada, falhavam ao conectar e
+    eram PULADOS em silencio - dando falsa sensacao de suite verde.
+    """
     explicit = os.getenv("TEST_DATABASE_URL")
     if explicit:
         return explicit
-    base = make_url(os.getenv("DATABASE_URL", DEFAULT_URL))
-    return str(base.set(database=TEST_DB_NAME))
+    url = make_url(settings.database_url).set(database=TEST_DB_NAME)
+    # ATENCAO: `str(url)` mascara a senha como "***" (SQLAlchemy esconde
+    # credencial no __str__). Usar str() aqui faz a conexao tentar autenticar
+    # literalmente com "***" e falhar - que foi exatamente o que aconteceu.
+    return url.render_as_string(hide_password=False)
 
 
 def _ensure_database(url: str) -> None:
@@ -66,7 +76,13 @@ def engine() -> Iterator[Engine]:
         with engine.connect():
             pass
     except Exception as exc:  # pragma: no cover - depende do ambiente
-        pytest.skip(f"{SKIP_REASON} ({exc.__class__.__name__})", allow_module_level=True)
+        # A URL (sem senha) entra na mensagem: um skip silencioso ja escondeu
+        # uma credencial errada aqui antes.
+        alvo = make_url(url).render_as_string(hide_password=True)
+        pytest.skip(
+            f"{SKIP_REASON}\n  tentativa: {alvo}\n  erro: {exc.__class__.__name__}: {exc}",
+            allow_module_level=True,
+        )
 
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
