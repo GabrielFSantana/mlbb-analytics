@@ -264,8 +264,8 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | `/meta` | ✅ Fase 1 — tier list de todas as lanes |
 | `/meta lane:<...> ranque:<...> formato:<...>` | ✅ — tier list em **imagem** (padrão) ou texto |
 | `/hero <nome> [ranque] [formato]` | ✅ — ficha em **imagem** (padrão) ou texto |
-| `/counter <nome>` | ✅ Fase 3b — forte contra, fraco contra, combina com |
-| `/build <herói> [lane]` | ✅ Fase 3c — itens centrais, emblema e feitiço mais usados |
+| `/counter <nome> [formato]` | ✅ — forte contra, fraco contra, combina com, em **imagem** |
+| `/build <herói> [lane] [formato]` | ✅ — itens centrais com ícones, emblema e feitiço, em **imagem** |
 | `/patch` | ✅ Fase 3b — patch vigente segundo a fonte |
 | `/player`, `/track`, `/compare` | ⏳ Fase 4 |
 
@@ -315,7 +315,7 @@ rate no período.
 
 ## Cards em imagem
 
-`/meta` e `/hero` respondem com um PNG gerado na hora.
+`/meta`, `/hero`, `/counter` e `/build` respondem com um PNG gerado na hora.
 
 O card do **meta** traz tiers como faixas coloridas e os retratos oficiais dos heróis
 (CDN da Moonton, pelas URLs que já guardamos). Uma tier list com trinta heróis vira
@@ -325,6 +325,10 @@ O card do **herói** traz retrato grande, classe, e win/pick/ban com barras. As 
 usam exatamente as mesmas faixas de referência do cálculo de score
 (`app/domain/scoring.py`) — se divergissem, a barra contaria uma história diferente do
 tier exibido ao lado. Há teste garantindo essa amarração.
+
+O card de **counters** separa em três faixas coloridas (forte contra, fraco contra,
+combina com), com os retratos lado a lado. O de **build** mostra os ícones dos itens em
+sequência, com emblema, feitiço e as taxas de vitória e uso de cada variante.
 
 `formato:Texto` volta ao embed. E a imagem **nunca** impede a resposta: se a
 renderização falhar — rede, fonte ausente, imagem corrompida — o comando cai para o

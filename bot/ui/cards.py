@@ -24,7 +24,7 @@ import httpx
 from PIL import Image, ImageDraw, ImageFont
 
 from bot.core.logging import get_logger
-from bot.services.schemas import HeroDetail, MetaResponse
+from bot.services.schemas import HeroBuilds, HeroCounters, HeroDetail, MetaResponse
 from bot.ui.embeds import (
     LANE_LABELS,
     RANK_LABELS,
@@ -434,4 +434,293 @@ async def render_hero_card(hero: HeroDetail) -> bytes | None:
     )
 
 
-__all__ = ["LANE_LABELS", "render_hero_card", "render_meta_card"]
+
+
+# ---------------------------------------------------------------------
+# Card de counters
+# ---------------------------------------------------------------------
+
+RETRATO_CABECALHO = 96
+RETRATO_PEQUENO = 58
+MAX_POR_SECAO = 8
+
+COR_FORTE = (118, 200, 128)
+COR_FRACO = (255, 120, 110)
+COR_SINERGIA = (98, 168, 220)
+
+
+def _cabecalho_heroi(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    nome: str,
+    subtitulo: str,
+    retrato_bytes: bytes | None,
+    cor: tuple[int, int, int],
+) -> int:
+    """Desenha retrato + nome no topo. Devolve o y onde o conteudo comeca."""
+    fonte_nome = _carregar_fonte(FONTES_NEGRITO, 34)
+    fonte_sub = _carregar_fonte(FONTES_REGULARES, 15)
+
+    px, py = MARGEM + 26, MARGEM + 24
+    if retrato_bytes:
+        try:
+            retrato = Image.open(io.BytesIO(retrato_bytes)).convert("RGBA")
+            retrato = retrato.resize((RETRATO_CABECALHO, RETRATO_CABECALHO), Image.LANCZOS)
+            imagem.paste(retrato, (px, py), _mascara_arredondada(RETRATO_CABECALHO, 16))
+        except OSError:  # pragma: no cover - imagem corrompida
+            retrato_bytes = None
+    if not retrato_bytes:
+        desenho.rounded_rectangle(
+            (px, py, px + RETRATO_CABECALHO, py + RETRATO_CABECALHO), 16, fill=COR_BORDA
+        )
+
+    tx = px + RETRATO_CABECALHO + 24
+    desenho.text((tx, py + 16), nome, font=fonte_nome, fill=COR_TEXTO)
+    desenho.text((tx, py + 58), subtitulo, font=fonte_sub, fill=cor)
+    return py + RETRATO_CABECALHO + 26
+
+
+def _fila_de_herois(
+    imagem: Image.Image,
+    desenho: ImageDraw.ImageDraw,
+    herois: list,
+    x: int,
+    y: int,
+    retratos: dict[str, bytes],
+) -> None:
+    fonte_nome = _carregar_fonte(FONTES_REGULARES, 11)
+    mascara = _mascara_arredondada(RETRATO_PEQUENO, 10)
+    for heroi in herois[:MAX_POR_SECAO]:
+        dados = retratos.get(heroi.image_url or "")
+        retrato = None
+        if dados:
+            try:
+                retrato = Image.open(io.BytesIO(dados)).convert("RGBA")
+                retrato = retrato.resize((RETRATO_PEQUENO, RETRATO_PEQUENO), Image.LANCZOS)
+            except OSError:  # pragma: no cover - imagem corrompida
+                retrato = None
+        if retrato is not None:
+            imagem.paste(retrato, (x, y), mascara)
+        else:
+            desenho.rounded_rectangle(
+                (x, y, x + RETRATO_PEQUENO, y + RETRATO_PEQUENO), 10, fill=COR_BORDA
+            )
+        nome = _encurtar(heroi.name, fonte_nome, RETRATO_PEQUENO + 8)
+        largura = fonte_nome.getlength(nome)
+        desenho.text(
+            (x + (RETRATO_PEQUENO - largura) / 2, y + RETRATO_PEQUENO + 3),
+            nome,
+            font=fonte_nome,
+            fill=COR_TEXTO,
+        )
+        x += RETRATO_PEQUENO + 10
+
+
+def _compor_counters(dados: HeroCounters, retratos: dict[str, bytes]) -> bytes:
+    fonte_secao = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_vazio = _carregar_fonte(FONTES_REGULARES, 13)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 13)
+
+    secoes = [
+        ("FORTE CONTRA", dados.strong_against, COR_FORTE),
+        ("FRACO CONTRA", dados.weak_against, COR_FRACO),
+        ("COMBINA COM", dados.good_with, COR_SINERGIA),
+    ]
+    altura_secao = 24 + RETRATO_PEQUENO + 20 + 16
+    altura = MARGEM + 24 + RETRATO_CABECALHO + 26 + len(secoes) * altura_secao + 46 + MARGEM
+
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+
+    y = _cabecalho_heroi(
+        imagem, desenho, dados.hero.name, "COUNTERS E SINERGIAS", retratos.get(
+            dados.hero.image_url or ""
+        ), COR_TEXTO_FRACO
+    )
+
+    x = MARGEM + 26
+    for titulo, herois, cor in secoes:
+        desenho.rounded_rectangle((x, y + 2, x + 5, y + 16), 2, fill=cor)
+        desenho.text((x + 14, y), titulo, font=fonte_secao, fill=cor)
+        if herois:
+            _fila_de_herois(imagem, desenho, herois, x, y + 24, retratos)
+            excedente = len(herois) - MAX_POR_SECAO
+            if excedente > 0:
+                desenho.text(
+                    (x + MAX_POR_SECAO * (RETRATO_PEQUENO + 10), y + 44),
+                    f"+{excedente}",
+                    font=fonte_vazio,
+                    fill=COR_TEXTO_FRACO,
+                )
+        else:
+            desenho.text(
+                (x + 14, y + 36), "A fonte nao publicou.", font=fonte_vazio, fill=COR_TEXTO_FRACO
+            )
+        y += altura_secao
+
+    partes = [f"Fonte: {dados.source}"] if dados.source else []
+    if dados.is_mock:
+        partes.append("DADOS MOCK")
+    if partes:
+        desenho.text(
+            (MARGEM + 26, altura - MARGEM - 26),
+            " · ".join(partes),
+            font=fonte_rodape,
+            fill=COR_TEXTO_FRACO,
+        )
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_counters_card(dados: HeroCounters) -> bytes | None:
+    """Gera o PNG de counters. None quando nao ha nenhuma relacao."""
+    todos = dados.strong_against + dados.weak_against + dados.good_with
+    if not todos:
+        return None
+    urls = [h.image_url for h in [dados.hero, *todos] if h.image_url]
+    retratos = await _baixar_retratos(urls)
+    return await asyncio.to_thread(_compor_counters, dados, retratos)
+
+
+
+
+# ---------------------------------------------------------------------
+# Card de build
+# ---------------------------------------------------------------------
+
+ICONE_ITEM = 62
+MAX_VARIANTES = 3
+
+
+def _compor_build(dados: HeroBuilds, imagens: dict[str, bytes]) -> bytes:
+    fonte_opcao = _carregar_fonte(FONTES_NEGRITO, 15)
+    fonte_item = _carregar_fonte(FONTES_REGULARES, 11)
+    fonte_meta = _carregar_fonte(FONTES_REGULARES, 13)
+    fonte_seta = _carregar_fonte(FONTES_NEGRITO, 18)
+    fonte_nota = _carregar_fonte(FONTES_REGULARES, 12)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 13)
+
+    # Mais usadas primeiro: e a pergunta de quem digita /build.
+    variantes = sorted(dados.builds, key=lambda b: b.pick_rate, reverse=True)[:MAX_VARIANTES]
+    altura_variante = 22 + ICONE_ITEM + 18 + 22
+    altura = (
+        MARGEM + 24 + RETRATO_CABECALHO + 26
+        + len(variantes) * altura_variante
+        + 34  # nota sobre itens centrais
+        + 46 + MARGEM
+    )
+
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+
+    lane = LANE_LABELS.get(dados.lane or "", (dados.lane or "").upper())
+    y = _cabecalho_heroi(
+        imagem,
+        desenho,
+        dados.hero.name,
+        f"BUILD · {lane}" if lane else "BUILD",
+        imagens.get(dados.hero.image_url or ""),
+        COR_TEXTO_FRACO,
+    )
+
+    x0 = MARGEM + 26
+    mascara = _mascara_arredondada(ICONE_ITEM, 10)
+    for indice, build in enumerate(variantes, start=1):
+        desenho.text((x0, y), f"OPCAO {indice}", font=fonte_opcao, fill=COR_TEXTO_FRACO)
+
+        # Numeros a direita, alinhados com o titulo da opcao.
+        resumo = f"{build.win_rate * 100:.2f}% WR · {build.pick_rate * 100:.2f}% de uso"
+        largura_resumo = fonte_meta.getlength(resumo)
+        desenho.text(
+            (LARGURA - MARGEM - 26 - largura_resumo, y), resumo, font=fonte_meta, fill=COR_TEXTO
+        )
+
+        x = x0
+        topo = y + 22
+        for posicao, item in enumerate(build.items):
+            if posicao:
+                desenho.text((x, topo + ICONE_ITEM / 2 - 12), "›", font=fonte_seta, fill=COR_BORDA)
+                x += 18
+            dados_icone = imagens.get(item.image_url or "")
+            icone = None
+            if dados_icone:
+                try:
+                    icone = Image.open(io.BytesIO(dados_icone)).convert("RGBA")
+                    icone = icone.resize((ICONE_ITEM, ICONE_ITEM), Image.LANCZOS)
+                except OSError:  # pragma: no cover - imagem corrompida
+                    icone = None
+            if icone is not None:
+                imagem.paste(icone, (x, topo), mascara)
+            else:
+                desenho.rounded_rectangle(
+                    (x, topo, x + ICONE_ITEM, topo + ICONE_ITEM), 10, fill=COR_BORDA
+                )
+            nome = _encurtar(item.name, fonte_item, ICONE_ITEM + 26)
+            largura_nome = fonte_item.getlength(nome)
+            desenho.text(
+                (x + (ICONE_ITEM - largura_nome) / 2, topo + ICONE_ITEM + 4),
+                nome,
+                font=fonte_item,
+                fill=COR_TEXTO,
+            )
+            x += ICONE_ITEM + 14
+
+        extras = [p for p in (build.emblem, build.battle_spell) if p]
+        if extras:
+            desenho.text(
+                (x + 16, topo + ICONE_ITEM / 2 - 8),
+                " · ".join(extras),
+                font=fonte_meta,
+                fill=COR_TEXTO_FRACO,
+            )
+        y += altura_variante
+
+    # A fonte publica so os itens centrais: dizer isso e parte do dado.
+    desenho.text(
+        (x0, y),
+        "A fonte publica apenas os itens centrais, nao a build fechada de seis.",
+        font=fonte_nota,
+        fill=COR_TEXTO_FRACO,
+    )
+
+    partes = [f"Fonte: {dados.source}"]
+    if dados.collected_at:
+        partes.append(dados.collected_at.strftime("Coletado em %d/%m/%Y"))
+    if not dados.source_available:
+        partes.append("FONTE INDISPONIVEL: dado da ultima coleta")
+    if dados.is_mock:
+        partes.append("DADOS MOCK")
+    desenho.text(
+        (x0, altura - MARGEM - 26), " · ".join(partes), font=fonte_rodape, fill=COR_TEXTO_FRACO
+    )
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_build_card(dados: HeroBuilds) -> bytes | None:
+    """Gera o PNG das builds. None quando nao ha build para desenhar."""
+    if not dados.builds:
+        return None
+    urls = [dados.hero.image_url] if dados.hero.image_url else []
+    urls += [item.image_url for build in dados.builds for item in build.items if item.image_url]
+    imagens = await _baixar_retratos(urls)
+    return await asyncio.to_thread(_compor_build, dados, imagens)
+
+
+__all__ = [
+    "LANE_LABELS",
+    "render_build_card",
+    "render_counters_card",
+    "render_hero_card",
+    "render_meta_card",
+]

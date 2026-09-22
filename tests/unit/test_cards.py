@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 import pytest
 from PIL import Image
 
-from bot.services.schemas import HeroDetail, MetaResponse
+from bot.services.schemas import HeroBuilds, HeroCounters, HeroDetail, MetaResponse
 from bot.ui import cards
 
 
@@ -243,3 +243,106 @@ def test_faixas_das_barras_batem_com_o_scoring():
     assert cards.BARRA_WIN_MAX == WIN_RATE_CEILING
     assert cards.BARRA_PICK_MAX == PICK_RATE_SATURATION
     assert cards.BARRA_BAN_MAX == BAN_RATE_SATURATION
+
+
+# -- cards de counter e build -------------------------------------------
+
+
+def heroi_simples(nome: str, imagem: str | None = "https://cdn/sun.png") -> dict:
+    return {
+        "id": abs(hash(nome)) % 1000,
+        "name": nome,
+        "slug": nome.lower(),
+        "role": "mage",
+        "image_url": imagem,
+    }
+
+
+def counters(**overrides: object) -> HeroCounters:
+    base: dict[str, object] = {
+        "hero": heroi_simples("Leomord"),
+        "strong_against": [heroi_simples("Pharsa"), heroi_simples("Yve")],
+        "weak_against": [heroi_simples("Phoveus")],
+        "good_with": [heroi_simples("Vexana")],
+        "source": "rone_arena",
+        "is_mock": False,
+    }
+    base.update(overrides)
+    return HeroCounters.model_validate(base)
+
+
+def builds(**overrides: object) -> HeroBuilds:
+    variante = {
+        "variant": 0,
+        "win_rate": 0.5797,
+        "pick_rate": 0.1632,
+        "emblem": "Assassin",
+        "battle_spell": "Retribution",
+        "items": [
+            {"name": "War Axe", "image_url": "https://cdn/sun.png", "position": 0},
+            {"name": "Endless Battle", "image_url": None, "position": 1},
+        ],
+    }
+    base: dict[str, object] = {
+        "hero": heroi_simples("Leomord"),
+        "lane": "jungle",
+        "builds": [variante],
+        "collected_at": datetime(2026, 9, 22, tzinfo=UTC),
+        "source": "rone_arena",
+        "is_mock": False,
+        "source_available": True,
+    }
+    base.update(overrides)
+    return HeroBuilds.model_validate(base)
+
+
+async def test_counter_card_gera_png():
+    dados = await cards.render_counters_card(counters())
+    assert dados is not None
+    assert Image.open(io.BytesIO(dados)).width == cards.LARGURA
+
+
+async def test_counter_card_sem_nenhuma_relacao_nao_renderiza():
+    """Sem relacao nao ha card: o embed explica o motivo (fonte fora x vazio)."""
+    vazio = counters(strong_against=[], weak_against=[], good_with=[])
+    assert await cards.render_counters_card(vazio) is None
+
+
+async def test_counter_card_com_secao_vazia_ainda_renderiza():
+    dados = await cards.render_counters_card(counters(good_with=[]))
+    assert dados is not None
+
+
+async def test_build_card_gera_png():
+    dados = await cards.render_build_card(builds())
+    assert dados is not None
+    assert Image.open(io.BytesIO(dados)).width == cards.LARGURA
+
+
+async def test_build_card_sem_builds_nao_renderiza():
+    assert await cards.render_build_card(builds(builds=[])) is None
+
+
+async def test_build_card_cresce_com_as_variantes():
+    uma = await cards.render_build_card(builds())
+    tres = await cards.render_build_card(
+        builds(builds=[{**builds().builds[0].model_dump(), "variant": i} for i in range(3)])
+    )
+    assert uma is not None and tres is not None
+    assert Image.open(io.BytesIO(tres)).height > Image.open(io.BytesIO(uma)).height
+
+
+async def test_build_card_limita_as_variantes_exibidas():
+    """Mais de tres variantes nao pode esticar o card indefinidamente."""
+    muitas = [{**builds().builds[0].model_dump(), "variant": i} for i in range(8)]
+    tres = [{**builds().builds[0].model_dump(), "variant": i} for i in range(3)]
+
+    card_muitas = await cards.render_build_card(builds(builds=muitas))
+    card_tres = await cards.render_build_card(builds(builds=tres))
+    assert card_muitas is not None and card_tres is not None
+    assert Image.open(io.BytesIO(card_muitas)).height == Image.open(io.BytesIO(card_tres)).height
+
+
+async def test_build_card_item_sem_icone_nao_quebra():
+    """Endless Battle entra sem image_url no fixture: sai com placeholder."""
+    assert await cards.render_build_card(builds()) is not None
