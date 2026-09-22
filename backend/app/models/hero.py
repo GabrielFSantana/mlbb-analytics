@@ -11,6 +11,7 @@ from app.database.base import Base, TimestampMixin
 from app.models.enums import HeroRole
 
 if TYPE_CHECKING:
+    from app.models.hero_relation import HeroRelation
     from app.models.hero_stats import HeroStats
     from app.models.meta_snapshot import MetaSnapshot
 
@@ -36,6 +37,11 @@ class Hero(Base, TimestampMixin):
     )
     meta_snapshots: Mapped[list[MetaSnapshot]] = relationship(
         back_populates="hero", cascade="all, delete-orphan"
+    )
+    relations: Mapped[list[HeroRelation]] = relationship(
+        back_populates="hero",
+        cascade="all, delete-orphan",
+        foreign_keys="HeroRelation.hero_id",
     )
 
     def __repr__(self) -> str:  # pragma: no cover - conveniencia de debug

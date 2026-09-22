@@ -31,7 +31,8 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
     print(
         f"ok: {result.heroes} herois, {result.stats} estatisticas, "
-        f"{result.meta_snapshots} snapshots de meta, {result.patches} patches "
+        f"{result.meta_snapshots} snapshots de meta, {result.patches} patches, "
+        f"{result.relations} relacoes "
         f"({result.skipped} ja existentes)"
     )
     for warning in result.warnings:

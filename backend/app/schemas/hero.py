@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from app.models.enums import HeroRole, RankFilter
+from app.models.enums import HeroRole, Lane, RankFilter, RelationType, Tier
 
 
 class HeroRead(BaseModel):
@@ -53,8 +53,41 @@ class HeroStatsRead(BaseModel):
         return round(self.ban_rate * 100, 2)
 
 
+class HeroLanePosition(BaseModel):
+    """Onde o heroi joga e quao forte esta naquela lane."""
+
+    lane: Lane
+    tier: Tier
+    score: float
+    score_delta: float | None = None
+
+
+class HeroRelationRead(BaseModel):
+    """Um heroi relacionado, com o tipo da relacao."""
+
+    relation_type: RelationType
+    hero: HeroRead
+
+
 class HeroWithStats(HeroRead):
     latest_stats: HeroStatsRead | None = None
+    lanes: list[HeroLanePosition] = Field(
+        default_factory=list, description="Posicao no meta por lane, na coleta mais recente."
+    )
+    patch: str | None = None
+    source: str | None = None
+    is_mock: bool = False
+
+
+class HeroCounters(BaseModel):
+    """Contra quem o heroi vai bem, mal, e com quem combina."""
+
+    hero: HeroRead
+    strong_against: list[HeroRead] = Field(default_factory=list)
+    weak_against: list[HeroRead] = Field(default_factory=list)
+    good_with: list[HeroRead] = Field(default_factory=list)
+    source: str | None = None
+    is_mock: bool = False
 
 
 class HeroListResponse(BaseModel):

@@ -9,12 +9,19 @@ from __future__ import annotations
 
 from datetime import datetime
 from types import TracebackType
+from urllib.parse import quote
 
 import httpx
 
 from bot.core.config import settings
 from bot.core.logging import get_logger
-from bot.services.schemas import MetaResponse, MetaUpdate
+from bot.services.schemas import (
+    HeroCounters,
+    HeroDetail,
+    MetaResponse,
+    MetaUpdate,
+    Patch,
+)
 
 logger = get_logger(__name__)
 
@@ -83,6 +90,22 @@ class MLBBApiClient:
             params["limit"] = limit
         payload = await self._get(path, **params)
         return MetaResponse.model_validate(payload)
+
+    async def get_hero(self, termo: str) -> HeroDetail:
+        """Detalhe de um heroi por nome ou slug."""
+        payload = await self._get(f"/api/v1/heroes/by-name/{quote(termo)}")
+        return HeroDetail.model_validate(payload)
+
+    async def get_hero_counters(self, termo: str) -> HeroCounters:
+        """Counters e sinergias de um heroi."""
+        payload = await self._get(f"/api/v1/heroes/by-name/{quote(termo)}/counters")
+        return HeroCounters.model_validate(payload)
+
+    async def get_current_patch(self) -> Patch | None:
+        payload = await self._get("/api/v1/patches/current")
+        if payload is None:
+            return None
+        return Patch.model_validate(payload)
 
     async def get_pending_update(self) -> MetaUpdate | None:
         """Atualizacao de meta ainda nao publicada, se houver."""

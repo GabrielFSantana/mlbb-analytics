@@ -10,7 +10,14 @@ from datetime import datetime
 
 import discord
 
-from bot.services.schemas import MetaEntry, MetaResponse, MetaUpdate
+from bot.services.schemas import (
+    HeroCounters,
+    HeroDetail,
+    MetaEntry,
+    MetaResponse,
+    MetaUpdate,
+    Patch,
+)
 
 LANE_LABELS: dict[str, str] = {
     "jungle": "JUNGLE",
@@ -218,4 +225,130 @@ def build_meta_update_embed(update: MetaUpdate) -> discord.Embed:
     if update.is_mock:
         rodape.append("DADOS MOCK")
     embed.set_footer(text=" • ".join(rodape))
+    return embed
+
+
+# ---------------------------------------------------------------------
+# /hero, /counter e /patch (Fase 3b)
+# ---------------------------------------------------------------------
+
+ROLE_LABELS: dict[str, str] = {
+    "tank": "Tank",
+    "fighter": "Lutador",
+    "assassin": "Assassino",
+    "mage": "Mago",
+    "marksman": "Atirador",
+    "support": "Suporte",
+}
+
+COLOR_HERO = discord.Colour.from_rgb(155, 109, 255)
+COLOR_PATCH = discord.Colour.from_rgb(90, 190, 140)
+
+
+def _rodape_fonte(patch: str | None, source: str | None, is_mock: bool) -> str:
+    partes = [f"Patch: {patch or 'desconhecido'}"]
+    if source:
+        partes.append(f"Fonte: {source}")
+    if is_mock:
+        partes.append("DADOS MOCK")
+    return " • ".join(partes)
+
+
+def build_hero_embed(hero: HeroDetail) -> discord.Embed:
+    """Ficha do heroi: classe, estatisticas e posicao no meta por lane."""
+    embed = discord.Embed(
+        title=f"🦸 {hero.name}",
+        colour=COLOR_MOCK if hero.is_mock else COLOR_HERO,
+        description=MOCK_WARNING if hero.is_mock else None,
+    )
+    if hero.image_url:
+        embed.set_thumbnail(url=hero.image_url)
+
+    embed.add_field(name="Classe", value=ROLE_LABELS.get(hero.role, hero.role), inline=True)
+
+    if hero.latest_stats:
+        s = hero.latest_stats
+        embed.add_field(
+            name="Estatisticas",
+            value=(
+                f"🏆 Win rate: **{s.win_rate * 100:.2f}%**\n"
+                f"🎯 Pick rate: {s.pick_rate * 100:.2f}%\n"
+                f"🚫 Ban rate: {s.ban_rate * 100:.2f}%"
+            ),
+            inline=True,
+        )
+    else:
+        embed.add_field(name="Estatisticas", value="Sem coleta ainda.", inline=True)
+
+    if hero.lanes:
+        linhas = []
+        for pos in hero.lanes:
+            lane = LANE_LABELS.get(pos.lane, pos.lane)
+            variacao = f" ({pos.score_delta:+.1f})" if pos.score_delta is not None else ""
+            emoji = TIER_EMOJI.get(pos.tier, "▫️")
+            linhas.append(f"{emoji} **{pos.tier}** · {lane} · {pos.score:.1f} pts{variacao}")
+        embed.add_field(name="Posicao no meta", value="\n".join(linhas), inline=False)
+
+    embed.set_footer(text=_rodape_fonte(hero.patch, hero.source, hero.is_mock))
+    return embed
+
+
+def build_counters_embed(dados: HeroCounters) -> discord.Embed:
+    """Contra quem o heroi vai bem, mal, e com quem combina."""
+    embed = discord.Embed(
+        title=f"⚔️ {dados.hero.name} — counters",
+        colour=COLOR_MOCK if dados.is_mock else COLOR_HERO,
+        description=MOCK_WARNING if dados.is_mock else None,
+    )
+    if dados.hero.image_url:
+        embed.set_thumbnail(url=dados.hero.image_url)
+
+    secoes = [
+        ("✅ Forte contra", dados.strong_against),
+        ("❌ Fraco contra", dados.weak_against),
+        ("🤝 Combina com", dados.good_with),
+    ]
+    tem_algo = False
+    for nome, herois in secoes:
+        if not herois:
+            continue
+        tem_algo = True
+        embed.add_field(
+            name=nome,
+            value="\n".join(f"• {h.name}" for h in herois),
+            inline=True,
+        )
+
+    if not tem_algo:
+        embed.description = (
+            f"{embed.description}\n\n" if embed.description else ""
+        ) + "A fonte nao publicou relacoes para este heroi."
+
+    embed.set_footer(text=_rodape_fonte(None, dados.source, dados.is_mock))
+    return embed
+
+
+def build_patch_embed(patch: Patch | None) -> discord.Embed:
+    """Patch vigente segundo a fonte de dados."""
+    if patch is None:
+        return discord.Embed(
+            title="🗓️ Patch atual",
+            description="Ainda nao ha patch registrado. Rode uma coleta primeiro.",
+            colour=COLOR_PATCH,
+        )
+
+    embed = discord.Embed(
+        title=f"🗓️ Patch {patch.version}",
+        colour=COLOR_PATCH,
+        description=patch.summary,
+    )
+    if patch.released_at:
+        embed.add_field(
+            name="Lancamento",
+            value=patch.released_at.strftime("%d/%m/%Y"),
+            inline=True,
+        )
+    if patch.notes_url:
+        embed.add_field(name="Notas", value=f"[Abrir]({patch.notes_url})", inline=True)
+    embed.set_footer(text="Versao informada pela fonte de dados configurada.")
     return embed

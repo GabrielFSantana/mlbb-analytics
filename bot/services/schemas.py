@@ -6,7 +6,7 @@ podem quebrar o bot em producao.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -59,3 +59,46 @@ class MetaUpdate(ApiModel):
     promoted: list[MetaEntry] = []
     demoted: list[MetaEntry] = []
     biggest_win_rate_gain: list[MetaEntry] = []
+
+
+class HeroStats(ApiModel):
+    win_rate: float
+    pick_rate: float
+    ban_rate: float
+    matches: int | None = None
+    patch: str
+    collected_at: datetime
+    source: str
+
+
+class HeroLanePosition(ApiModel):
+    lane: str
+    tier: str
+    score: float
+    score_delta: float | None = None
+
+
+class HeroDetail(Hero):
+    latest_stats: HeroStats | None = None
+    lanes: list[HeroLanePosition] = []
+    patch: str | None = None
+    source: str | None = None
+    is_mock: bool = False
+
+
+class HeroCounters(ApiModel):
+    hero: Hero
+    strong_against: list[Hero] = []
+    weak_against: list[Hero] = []
+    good_with: list[Hero] = []
+    source: str | None = None
+    is_mock: bool = False
+
+
+class Patch(ApiModel):
+    id: int
+    version: str
+    released_at: date | None = None
+    notes_url: str | None = None
+    summary: str | None = None
+    is_current: bool

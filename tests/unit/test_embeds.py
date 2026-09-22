@@ -6,11 +6,22 @@ from datetime import UTC, datetime
 
 import pytest
 
-from bot.services.schemas import Hero, MetaEntry, MetaResponse, MetaUpdate
+from bot.services.schemas import (
+    Hero,
+    HeroCounters,
+    HeroDetail,
+    MetaEntry,
+    MetaResponse,
+    MetaUpdate,
+    Patch,
+)
 from bot.ui.embeds import (
     MOCK_WARNING,
+    build_counters_embed,
+    build_hero_embed,
     build_meta_embed,
     build_meta_update_embed,
+    build_patch_embed,
     lane_label,
 )
 
@@ -195,3 +206,117 @@ def test_update_respeita_limite_de_campo_do_discord():
     muitos = [make_entry(f"Heroi{i}", "S", delta=3.0) for i in range(40)]
     embed = build_meta_update_embed(make_update(rising=muitos))
     assert all(len(f.value or "") <= 1024 for f in embed.fields)
+
+
+# -- /hero, /counter e /patch (Fase 3b) ---------------------------------
+
+
+def make_hero_detail(**overrides: object) -> HeroDetail:
+    base: dict[str, object] = {
+        "id": 1,
+        "name": "Leomord",
+        "slug": "leomord",
+        "role": "fighter",
+        "image_url": "https://exemplo/leomord.png",
+        "latest_stats": {
+            "win_rate": 0.541,
+            "pick_rate": 0.021,
+            "ban_rate": 0.311,
+            "patch": "2.1.18",
+            "collected_at": datetime(2026, 9, 22, tzinfo=UTC),
+            "source": "rone_arena",
+        },
+        "lanes": [
+            {"lane": "jungle", "tier": "S", "score": 69.7, "score_delta": 4.2},
+            {"lane": "exp", "tier": "A", "score": 58.1, "score_delta": None},
+        ],
+        "patch": "2.1.18",
+        "source": "rone_arena",
+        "is_mock": False,
+    }
+    base.update(overrides)
+    return HeroDetail.model_validate(base)
+
+
+def test_hero_embed_mostra_classe_stats_e_lanes():
+    embed = build_hero_embed(make_hero_detail())
+    assert embed.title == "🦸 Leomord"
+
+    nomes = [f.name for f in embed.fields]
+    assert "Classe" in nomes
+    assert "Estatisticas" in nomes
+    assert "Posicao no meta" in nomes
+
+    stats = next(f for f in embed.fields if f.name == "Estatisticas")
+    assert "54.10%" in (stats.value or "")
+
+    meta = next(f for f in embed.fields if f.name == "Posicao no meta")
+    assert "JUNGLE" in (meta.value or "")
+    assert "+4.2" in (meta.value or "")
+
+
+def test_hero_embed_traduz_a_classe():
+    embed = build_hero_embed(make_hero_detail(role="marksman"))
+    classe = next(f for f in embed.fields if f.name == "Classe")
+    assert classe.value == "Atirador"
+
+
+def test_hero_embed_sem_coleta_nao_quebra():
+    embed = build_hero_embed(make_hero_detail(latest_stats=None, lanes=[], patch=None))
+    stats = next(f for f in embed.fields if f.name == "Estatisticas")
+    assert "Sem coleta" in (stats.value or "")
+
+
+def test_hero_embed_sinaliza_mock():
+    embed = build_hero_embed(make_hero_detail(is_mock=True, source="mock"))
+    assert MOCK_WARNING in (embed.description or "")
+    assert "DADOS MOCK" in (embed.footer.text or "")
+
+
+def make_counters(**overrides: object) -> HeroCounters:
+    base: dict[str, object] = {
+        "hero": {"id": 1, "name": "Leomord", "slug": "leomord", "role": "fighter"},
+        "strong_against": [{"id": 2, "name": "Pharsa", "slug": "pharsa", "role": "mage"}],
+        "weak_against": [{"id": 3, "name": "Phoveus", "slug": "phoveus", "role": "fighter"}],
+        "good_with": [{"id": 4, "name": "Angela", "slug": "angela", "role": "support"}],
+        "source": "rone_arena",
+        "is_mock": False,
+    }
+    base.update(overrides)
+    return HeroCounters.model_validate(base)
+
+
+def test_counters_embed_tem_as_tres_secoes():
+    embed = build_counters_embed(make_counters())
+    nomes = [f.name for f in embed.fields]
+    assert "✅ Forte contra" in nomes
+    assert "❌ Fraco contra" in nomes
+    assert "🤝 Combina com" in nomes
+
+
+def test_counters_embed_sem_relacoes_explica():
+    embed = build_counters_embed(
+        make_counters(strong_against=[], weak_against=[], good_with=[])
+    )
+    assert embed.fields == []
+    assert "nao publicou relacoes" in (embed.description or "")
+
+
+def test_patch_embed():
+    patch = Patch.model_validate(
+        {
+            "id": 1,
+            "version": "2.1.18",
+            "released_at": "2025-09-28",
+            "summary": None,
+            "is_current": True,
+        }
+    )
+    embed = build_patch_embed(patch)
+    assert "2.1.18" in (embed.title or "")
+    assert "28/09/2025" in str([f.value for f in embed.fields])
+
+
+def test_patch_embed_sem_patch():
+    embed = build_patch_embed(None)
+    assert "coleta" in (embed.description or "")

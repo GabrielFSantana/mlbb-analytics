@@ -7,7 +7,7 @@ from fastapi import APIRouter, Query
 from app.api.deps import HeroServiceDep
 from app.models.enums import HeroRole, RankFilter
 from app.schemas.common import ErrorResponse
-from app.schemas.hero import HeroListResponse, HeroStatsRead, HeroWithStats
+from app.schemas.hero import HeroCounters, HeroListResponse, HeroStatsRead, HeroWithStats
 
 router = APIRouter(prefix="/heroes", tags=["heroes"])
 
@@ -42,6 +42,17 @@ def get_hero(hero_id: int, service: HeroServiceDep) -> HeroWithStats:
 def get_hero_by_name(term: str, service: HeroServiceDep) -> HeroWithStats:
     """Usado pelo bot, que recebe o nome digitado pelo usuario."""
     return service.get_hero_by_name_or_slug(term)
+
+
+@router.get(
+    "/by-name/{term}/counters",
+    response_model=HeroCounters,
+    responses={404: {"model": ErrorResponse}},
+    summary="Counters e sinergias de um heroi",
+)
+def get_hero_counters(term: str, service: HeroServiceDep) -> HeroCounters:
+    """Contra quem o heroi vai bem, contra quem vai mal, e com quem combina."""
+    return service.get_counters(term)
 
 
 @router.get(

@@ -17,6 +17,7 @@ logger = get_logger(__name__)
 # Extensoes carregadas no boot. Novos comandos entram aqui.
 EXTENSIONS: tuple[str, ...] = (
     "bot.commands.meta",
+    "bot.commands.heroes",
     "bot.commands.meta_updates",
 )
 

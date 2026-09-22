@@ -20,9 +20,15 @@ from typing import Any, ClassVar
 
 from app.core.logging import get_logger
 from app.domain.scoring import calculate_score, score_to_tier
-from app.models.enums import HeroRole, Lane, RankFilter
+from app.models.enums import HeroRole, Lane, RankFilter, RelationType
 from app.providers.base import MLBBDataProvider
-from app.providers.schemas import HeroData, HeroStatsData, MetaEntryData, PatchData
+from app.providers.schemas import (
+    HeroData,
+    HeroRelationData,
+    HeroStatsData,
+    MetaEntryData,
+    PatchData,
+)
 
 logger = get_logger(__name__)
 
@@ -164,6 +170,23 @@ class MockDataProvider(MLBBDataProvider):
             patch=patch,
             collected_at=collected_at,
         )
+
+    # -- relacoes -------------------------------------------------------
+
+    def get_hero_relations(self) -> list[HeroRelationData]:
+        """Relacoes ficticias, deterministas, definidas no arquivo de mock."""
+        relacoes: list[HeroRelationData] = []
+        for hero in self._data["heroes"]:
+            for tipo, alvos in (hero.get("relations") or {}).items():
+                for alvo in alvos:
+                    relacoes.append(
+                        HeroRelationData(
+                            hero_slug=hero["slug"],
+                            related_hero_slug=alvo,
+                            relation_type=RelationType(tipo),
+                        )
+                    )
+        return relacoes
 
     # -- patches --------------------------------------------------------
 

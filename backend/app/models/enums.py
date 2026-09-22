@@ -65,3 +65,14 @@ class RankFilter(StrEnum):
     MYTHIC = "mythic"
     HONOR = "honor"
     GLORY = "glory"
+
+
+class RelationType(StrEnum):
+    """Relacao entre dois herois, do ponto de vista do heroi principal."""
+
+    #: O heroi principal leva vantagem contra o alvo.
+    STRONG = "strong"
+    #: O heroi principal leva desvantagem contra o alvo.
+    WEAK = "weak"
+    #: Boa sinergia quando jogam no mesmo time.
+    ASSIST = "assist"

@@ -15,7 +15,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import HeroRole, Lane, RankFilter, Tier
+from app.models.enums import HeroRole, Lane, RankFilter, RelationType, Tier
 
 
 class ProviderDTO(BaseModel):
@@ -50,6 +50,14 @@ class MetaEntryData(ProviderDTO):
     score: float = Field(ge=0.0, le=100.0)
     patch: str
     collected_at: datetime
+
+
+class HeroRelationData(ProviderDTO):
+    """Uma relacao direcionada entre dois herois."""
+
+    hero_slug: str
+    related_hero_slug: str
+    relation_type: RelationType
 
 
 class PatchData(ProviderDTO):

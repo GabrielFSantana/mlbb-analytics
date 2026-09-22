@@ -1,8 +1,7 @@
 # MLBB Analytics
 
 Plataforma de análise para **Mobile Legends: Bang Bang**: bot de Discord, API REST e
-banco PostgreSQL. Este repositório está na **Fase 1** — sistema de META funcionando
-ponta a ponta com dados de demonstração.
+banco PostgreSQL, com coleta automática de estatísticas reais do jogo.
 
 > ### ⚠️ Sobre a origem dos dados
 >
@@ -52,6 +51,7 @@ ponta a ponta com dados de demonstração.
 - [Testes](#testes)
 - [Como o score do meta é calculado](#como-o-score-do-meta-é-calculado)
 - [Roadmap](#roadmap)
+- [Problemas conhecidos](#problemas-conhecidos)
 
 ---
 
@@ -244,6 +244,7 @@ deve ser commitado.
 | GET | `/api/v1/heroes` | Lista heróis. Filtros: `role`, `search`, `limit`, `offset`. |
 | GET | `/api/v1/heroes/{id}` | Detalhe + estatística mais recente. |
 | GET | `/api/v1/heroes/by-name/{termo}` | Busca por nome ou slug (usada pelo bot). |
+| GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
 | GET | `/api/v1/meta` | Tier list de todas as lanes. |
 | GET | `/api/v1/meta/{lane}` | Tier list de uma lane (`jungle`, `gold`, `mid`, `exp`, `roam`). |
@@ -260,9 +261,10 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 |---|---|
 | `/meta` | ✅ Fase 1 — tier list de todas as lanes |
 | `/meta lane:<jungle\|gold\|mid\|exp\|roam>` | ✅ Fase 1 |
-| `/hero <nome>` | ⏳ Fase 3 |
+| `/hero <nome>` | ✅ Fase 3b — classe, win/pick/ban e posição no meta por lane |
+| `/counter <nome>` | ✅ Fase 3b — forte contra, fraco contra, combina com |
 | `/build <herói>` | ⏳ Fase 5 |
-| `/patch` | ⏳ Fase 3 |
+| `/patch` | ✅ Fase 3b — patch vigente segundo a fonte |
 | `/player`, `/track`, `/compare` | ⏳ Fase 4 |
 
 ## Testes
@@ -346,12 +348,39 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 | 1 | Estrutura, API, Postgres, Alembic, Docker, `/health`, heroes, meta, bot `/meta` | ✅ |
 | 2 | Coleta automática, histórico e publicação no canal de atualizações | ✅ |
 | 3 | Integração de fonte real de estatísticas | ✅ |
-| 3b | Comandos `/hero`, `/build`, `/patch` | ⏳ |
+| 3b | Comandos `/hero`, `/counter`, `/patch` | ✅ |
+| 3c | Comando `/build` | ⏳ |
 | 4 | Player Tracking, Match History (`/player`, `/track`, `/compare`) | ⏳ |
 | 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |
 | 6 | Dashboard web | ⏳ |
 
 Nenhuma fase avança sem autorização explícita.
+
+## Problemas conhecidos
+
+### Docker Desktop abre e fecha sozinho (Windows)
+
+O backend do Docker cria sockets Unix dentro de `%LOCALAPPDATA%`. Quando o processo
+morre de forma anormal — crash, desligamento abrupto — esses arquivos ficam órfãos:
+0 byte, atributo `ReparsePoint`, e **não podem ser apagados** por `Remove-Item`,
+`del /f` nem `fsutil`.
+
+No boot seguinte o Docker tenta *remover* o socket antigo antes de recriar, falha, e o
+processo morre poucos minutos depois de abrir — sem mensagem visível. O sintoma é
+exatamente "abre e fecha sozinho".
+
+Para destravar:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/fix-docker-sockets.ps1 -PararDocker -IniciarDocker
+```
+
+O script renomeia o diretório que contém o socket travado (a operação age na entrada
+do diretório, não no arquivo) e cria uma pasta limpa. Os antigos ficam ao lado com
+sufixo `.orfao-<data>` e podem ser apagados depois de um reboot.
+
+Para confirmar que é esse o problema, procure por `backend crashed` em
+`%LOCALAPPDATA%\Docker\log\host\com.docker.backend.exe.log`.
 
 ## Segurança
 

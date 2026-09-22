@@ -1,6 +1,6 @@
 {
   "_notice": "DADOS FICTICIOS. Win/pick/ban rates deste arquivo foram inventados para desenvolvimento e NAO representam o estado real do jogo. Nomes e classes dos herois sao reais; qualquer numero aqui nao e.",
-  "_schema": "win_rate/pick_rate/ban_rate sao fracoes (0.0-1.0), em faixas equivalentes as da fonte real. 'previous' e a leitura anterior, usada para exercitar o calculo de tendencia.",
+  "_schema": "win_rate/pick_rate/ban_rate sao fracoes (0.0-1.0), em faixas equivalentes as da fonte real. 'previous' e a leitura anterior, usada para exercitar o calculo de tendencia. 'relations' sao ficticias e deterministas.",
   "patch": "MOCK-0.1",
   "collected_at": "2026-09-15T00:00:00+00:00",
   "previous_collected_at": "2026-09-08T00:00:00+00:00",
@@ -21,6 +21,19 @@
         "win_rate": 0.52,
         "pick_rate": 0.01775,
         "ban_rate": 0.198
+      },
+      "relations": {
+        "strong": [
+          "yi-sun-shin",
+          "julian"
+        ],
+        "weak": [
+          "estes",
+          "angela"
+        ],
+        "assist": [
+          "yi-sun-shin"
+        ]
       }
     },
     {
@@ -38,6 +51,19 @@
         "win_rate": 0.529,
         "pick_rate": 0.0225,
         "ban_rate": 0.281
+      },
+      "relations": {
+        "strong": [
+          "julian",
+          "balmond"
+        ],
+        "weak": [
+          "leomord",
+          "estes"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -56,6 +82,19 @@
         "win_rate": 0.524,
         "pick_rate": 0.02075,
         "ban_rate": 0.266
+      },
+      "relations": {
+        "strong": [
+          "balmond",
+          "hayabusa"
+        ],
+        "weak": [
+          "yi-sun-shin",
+          "leomord"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -74,6 +113,19 @@
         "win_rate": 0.511,
         "pick_rate": 0.013,
         "ban_rate": 0.09
+      },
+      "relations": {
+        "strong": [
+          "hayabusa",
+          "fredrinn"
+        ],
+        "weak": [
+          "julian",
+          "yi-sun-shin"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -91,6 +143,19 @@
         "win_rate": 0.508,
         "pick_rate": 0.01575,
         "ban_rate": 0.151
+      },
+      "relations": {
+        "strong": [
+          "fredrinn",
+          "beatrix"
+        ],
+        "weak": [
+          "balmond",
+          "julian"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -109,6 +174,19 @@
         "win_rate": 0.503,
         "pick_rate": 0.015,
         "ban_rate": 0.088
+      },
+      "relations": {
+        "strong": [
+          "beatrix",
+          "wanwan"
+        ],
+        "weak": [
+          "hayabusa",
+          "balmond"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -126,6 +204,19 @@
         "win_rate": 0.517,
         "pick_rate": 0.02125,
         "ban_rate": 0.221
+      },
+      "relations": {
+        "strong": [
+          "wanwan",
+          "granger"
+        ],
+        "weak": [
+          "fredrinn",
+          "hayabusa"
+        ],
+        "assist": [
+          "wanwan"
+        ]
       }
     },
     {
@@ -143,6 +234,19 @@
         "win_rate": 0.526,
         "pick_rate": 0.021,
         "ban_rate": 0.247
+      },
+      "relations": {
+        "strong": [
+          "granger",
+          "brody"
+        ],
+        "weak": [
+          "beatrix",
+          "fredrinn"
+        ],
+        "assist": [
+          "beatrix"
+        ]
       }
     },
     {
@@ -161,6 +265,19 @@
         "win_rate": 0.512,
         "pick_rate": 0.02225,
         "ban_rate": 0.121
+      },
+      "relations": {
+        "strong": [
+          "brody",
+          "melissa"
+        ],
+        "weak": [
+          "wanwan",
+          "beatrix"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -178,6 +295,19 @@
         "win_rate": 0.515,
         "pick_rate": 0.02025,
         "ban_rate": 0.113
+      },
+      "relations": {
+        "strong": [
+          "melissa",
+          "kagura"
+        ],
+        "weak": [
+          "granger",
+          "wanwan"
+        ],
+        "assist": [
+          "beatrix"
+        ]
       }
     },
     {
@@ -195,6 +325,19 @@
         "win_rate": 0.494,
         "pick_rate": 0.01525,
         "ban_rate": 0.068
+      },
+      "relations": {
+        "strong": [
+          "kagura",
+          "pharsa"
+        ],
+        "weak": [
+          "brody",
+          "granger"
+        ],
+        "assist": [
+          "beatrix"
+        ]
       }
     },
     {
@@ -212,6 +355,19 @@
         "win_rate": 0.522,
         "pick_rate": 0.02,
         "ban_rate": 0.239
+      },
+      "relations": {
+        "strong": [
+          "pharsa",
+          "lunox"
+        ],
+        "weak": [
+          "melissa",
+          "brody"
+        ],
+        "assist": [
+          "pharsa"
+        ]
       }
     },
     {
@@ -229,6 +385,19 @@
         "win_rate": 0.531,
         "pick_rate": 0.0195,
         "ban_rate": 0.204
+      },
+      "relations": {
+        "strong": [
+          "lunox",
+          "valentina"
+        ],
+        "weak": [
+          "kagura",
+          "melissa"
+        ],
+        "assist": [
+          "kagura"
+        ]
       }
     },
     {
@@ -246,6 +415,19 @@
         "win_rate": 0.509,
         "pick_rate": 0.0155,
         "ban_rate": 0.141
+      },
+      "relations": {
+        "strong": [
+          "valentina",
+          "novaria"
+        ],
+        "weak": [
+          "pharsa",
+          "kagura"
+        ],
+        "assist": [
+          "kagura"
+        ]
       }
     },
     {
@@ -264,6 +446,19 @@
         "win_rate": 0.514,
         "pick_rate": 0.01825,
         "ban_rate": 0.226
+      },
+      "relations": {
+        "strong": [
+          "novaria",
+          "esmeralda"
+        ],
+        "weak": [
+          "lunox",
+          "pharsa"
+        ],
+        "assist": [
+          "kagura"
+        ]
       }
     },
     {
@@ -281,6 +476,19 @@
         "win_rate": 0.496,
         "pick_rate": 0.01325,
         "ban_rate": 0.079
+      },
+      "relations": {
+        "strong": [
+          "esmeralda",
+          "paquito"
+        ],
+        "weak": [
+          "valentina",
+          "lunox"
+        ],
+        "assist": [
+          "kagura"
+        ]
       }
     },
     {
@@ -298,6 +506,19 @@
         "win_rate": 0.518,
         "pick_rate": 0.0175,
         "ban_rate": 0.207
+      },
+      "relations": {
+        "strong": [
+          "paquito",
+          "arlott"
+        ],
+        "weak": [
+          "novaria",
+          "valentina"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -316,6 +537,19 @@
         "win_rate": 0.52,
         "pick_rate": 0.017,
         "ban_rate": 0.139
+      },
+      "relations": {
+        "strong": [
+          "arlott",
+          "terizla"
+        ],
+        "weak": [
+          "esmeralda",
+          "novaria"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -334,6 +568,19 @@
         "win_rate": 0.521,
         "pick_rate": 0.02125,
         "ban_rate": 0.191
+      },
+      "relations": {
+        "strong": [
+          "terizla",
+          "chou"
+        ],
+        "weak": [
+          "paquito",
+          "esmeralda"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -351,6 +598,19 @@
         "win_rate": 0.502,
         "pick_rate": 0.011,
         "ban_rate": 0.055
+      },
+      "relations": {
+        "strong": [
+          "chou",
+          "tigreal"
+        ],
+        "weak": [
+          "arlott",
+          "paquito"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -369,6 +629,19 @@
         "win_rate": 0.498,
         "pick_rate": 0.02475,
         "ban_rate": 0.223
+      },
+      "relations": {
+        "strong": [
+          "tigreal",
+          "mathilda"
+        ],
+        "weak": [
+          "terizla",
+          "arlott"
+        ],
+        "assist": [
+          "leomord"
+        ]
       }
     },
     {
@@ -386,6 +659,19 @@
         "win_rate": 0.513,
         "pick_rate": 0.01975,
         "ban_rate": 0.121
+      },
+      "relations": {
+        "strong": [
+          "mathilda",
+          "khufra"
+        ],
+        "weak": [
+          "chou",
+          "terizla"
+        ],
+        "assist": [
+          "valentina"
+        ]
       }
     },
     {
@@ -403,6 +689,19 @@
         "win_rate": 0.527,
         "pick_rate": 0.019,
         "ban_rate": 0.209
+      },
+      "relations": {
+        "strong": [
+          "khufra",
+          "angela"
+        ],
+        "weak": [
+          "tigreal",
+          "chou"
+        ],
+        "assist": [
+          "valentina"
+        ]
       }
     },
     {
@@ -420,6 +719,19 @@
         "win_rate": 0.511,
         "pick_rate": 0.01625,
         "ban_rate": 0.218
+      },
+      "relations": {
+        "strong": [
+          "angela",
+          "estes"
+        ],
+        "weak": [
+          "mathilda",
+          "tigreal"
+        ],
+        "assist": [
+          "valentina"
+        ]
       }
     },
     {
@@ -437,6 +749,19 @@
         "win_rate": 0.512,
         "pick_rate": 0.016,
         "ban_rate": 0.097
+      },
+      "relations": {
+        "strong": [
+          "estes",
+          "leomord"
+        ],
+        "weak": [
+          "khufra",
+          "mathilda"
+        ],
+        "assist": [
+          "valentina"
+        ]
       }
     },
     {
@@ -454,6 +779,19 @@
         "win_rate": 0.495,
         "pick_rate": 0.0105,
         "ban_rate": 0.101
+      },
+      "relations": {
+        "strong": [
+          "leomord",
+          "yi-sun-shin"
+        ],
+        "weak": [
+          "angela",
+          "khufra"
+        ],
+        "assist": [
+          "valentina"
+        ]
       }
     }
   ],

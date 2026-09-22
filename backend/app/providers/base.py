@@ -29,6 +29,7 @@ from app.core.exceptions import ProviderNotSupportedError
 from app.models.enums import Lane, RankFilter
 from app.providers.schemas import (
     HeroData,
+    HeroRelationData,
     HeroStatsData,
     MatchData,
     MetaEntryData,
@@ -71,6 +72,10 @@ class MLBBDataProvider(ABC):
         patch: str | None = None,
     ) -> list[MetaEntryData]:
         """Tier list por lane. `lane=None` retorna todas as lanes."""
+
+    def get_hero_relations(self) -> list[HeroRelationData]:
+        """Contra quem cada heroi vai bem, mal, e com quem combina. Opcional."""
+        raise ProviderNotSupportedError(f"{self.name} nao fornece relacoes entre herois")
 
     def current_patch(self) -> str:
         """Versao do jogo a que os dados desta fonte se referem."""

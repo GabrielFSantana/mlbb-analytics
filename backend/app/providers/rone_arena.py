@@ -40,9 +40,15 @@ from app.core.config import settings
 from app.core.exceptions import ProviderError
 from app.core.logging import get_logger
 from app.domain.scoring import calculate_score, score_to_tier
-from app.models.enums import HeroRole, Lane, RankFilter
+from app.models.enums import HeroRole, Lane, RankFilter, RelationType
 from app.providers.base import MLBBDataProvider
-from app.providers.schemas import HeroData, HeroStatsData, MetaEntryData, PatchData
+from app.providers.schemas import (
+    HeroData,
+    HeroRelationData,
+    HeroStatsData,
+    MetaEntryData,
+    PatchData,
+)
 
 logger = get_logger(__name__)
 
@@ -206,6 +212,8 @@ class RoneArenaProvider(MLBBDataProvider):
                 "name": nome,
                 "role": papel,
                 "lanes": self._extract_lanes(hero, nome),
+                # As relacoes vem no mesmo payload: nao custa requisicao extra.
+                "relations": dados.get("relation") or {},
             }
 
         if not catalogo:
@@ -363,6 +371,43 @@ class RoneArenaProvider(MLBBDataProvider):
                     )
                 )
         return entradas
+
+    def get_hero_relations(self) -> list[HeroRelationData]:
+        """Relacoes de todos os herois.
+
+        Vem do mesmo endpoint do catalogo, entao nao gera chamada adicional.
+        A fonte preenche as listas com zeros quando ha menos alvos que vagas;
+        esses sao descartados.
+        """
+        catalogo = self._catalog()
+        por_id = {hero_id: info["name"] for hero_id, info in catalogo.items()}
+
+        relacoes: list[HeroRelationData] = []
+        for hero_id, info in catalogo.items():
+            for tipo_bruto, bloco in (info.get("relations") or {}).items():
+                try:
+                    tipo = RelationType(str(tipo_bruto).strip().lower())
+                except ValueError:
+                    logger.warning(
+                        "tipo de relacao desconhecido; ignorado",
+                        extra={"hero_id": hero_id, "relation_type": tipo_bruto},
+                    )
+                    continue
+                for alvo in (bloco or {}).get("target_hero_id") or []:
+                    # 0 e preenchimento, nao heroi.
+                    if not alvo or alvo == hero_id:
+                        continue
+                    nome_alvo = por_id.get(int(alvo))
+                    if nome_alvo is None:
+                        continue
+                    relacoes.append(
+                        HeroRelationData(
+                            hero_slug=slugify(info["name"]),
+                            related_hero_slug=slugify(nome_alvo),
+                            relation_type=tipo,
+                        )
+                    )
+        return relacoes
 
     def get_patches(self) -> list[PatchData]:
         payload = self._get("/api/academy/meta/version", lang="en")

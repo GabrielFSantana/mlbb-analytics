@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ProviderNotSupportedError
 from app.core.logging import get_logger
 from app.models.enums import RankFilter
+from app.models.hero_relation import HeroRelation
 from app.models.hero_stats import HeroStats
 from app.models.meta_snapshot import MetaSnapshot
 from app.providers.base import MLBBDataProvider
@@ -24,6 +25,7 @@ from app.providers.factory import get_provider
 from app.repositories.hero_repository import HeroRepository
 from app.repositories.meta_repository import MetaRepository
 from app.repositories.patch_repository import PatchRepository
+from app.repositories.relation_repository import HeroRelationRepository
 from app.repositories.stats_repository import HeroStatsRepository
 
 logger = get_logger(__name__)
@@ -38,6 +40,7 @@ class SyncResult:
     stats: int = 0
     meta_snapshots: int = 0
     patches: int = 0
+    relations: int = 0
     skipped: int = 0
     warnings: list[str] = field(default_factory=list)
 
@@ -48,6 +51,7 @@ class SyncResult:
             "stats": self.stats,
             "meta_snapshots": self.meta_snapshots,
             "patches": self.patches,
+            "relations": self.relations,
             "skipped": self.skipped,
             "warnings": self.warnings,
         }
@@ -61,6 +65,7 @@ class SyncService:
         self.stats = HeroStatsRepository(db)
         self.meta = MetaRepository(db)
         self.patches = PatchRepository(db)
+        self.relations = HeroRelationRepository(db)
 
     def sync_all(self, *, rank_filter: RankFilter = RankFilter.ALL) -> SyncResult:
         """Importa catalogo, patches, estatisticas e meta em uma transacao."""
@@ -73,6 +78,7 @@ class SyncService:
         index = self.heroes.slug_index()
         self._sync_stats(result, index, rank_filter)
         self._sync_meta(result, index)
+        self._sync_relations(result, index)
 
         self.db.commit()
         logger.info("sincronizacao concluida", extra=result.as_dict())
@@ -140,6 +146,45 @@ class SyncService:
                 )
             )
             result.stats += 1
+
+    def _sync_relations(self, result: SyncResult, index: dict[str, object]) -> None:
+        try:
+            dados = self.provider.get_hero_relations()
+        except ProviderNotSupportedError:
+            result.warnings.append(f"{self.provider.name} nao fornece relacoes")
+            return
+
+        arestas: list[HeroRelation] = []
+        vistas: set[tuple[int, int, str]] = set()
+        for relacao in dados:
+            heroi = index.get(relacao.hero_slug)
+            alvo = index.get(relacao.related_hero_slug)
+            if heroi is None or alvo is None:
+                result.warnings.append(
+                    f"relacao com heroi desconhecido: "
+                    f"{relacao.hero_slug} -> {relacao.related_hero_slug}"
+                )
+                continue
+            chave = (
+                heroi.id,  # type: ignore[attr-defined]
+                alvo.id,  # type: ignore[attr-defined]
+                relacao.relation_type.value,
+            )
+            # A fonte pode repetir a mesma aresta; a constraint unica
+            # rejeitaria o lote inteiro.
+            if chave in vistas:
+                continue
+            vistas.add(chave)
+            arestas.append(
+                HeroRelation(
+                    hero_id=chave[0],
+                    related_hero_id=chave[1],
+                    relation_type=relacao.relation_type,
+                    source=self.provider.name,
+                )
+            )
+
+        result.relations = self.relations.replace_for_source(self.provider.name, arestas)
 
     def _sync_meta(self, result: SyncResult, index: dict[str, object]) -> None:
         for entry in self.provider.get_meta():
