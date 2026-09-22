@@ -17,6 +17,7 @@ from bot.services.schemas import (
     HeroCounters,
     HeroDetail,
     MetaResponse,
+    TeamProgress,
 )
 from bot.ui import cards
 
@@ -416,3 +417,60 @@ async def test_draft_card_reserva_espaco_para_nomes_nao_reconhecidos():
 
     assert sem_aviso is not None and com_aviso is not None
     assert Image.open(io.BytesIO(com_aviso)).height > Image.open(io.BytesIO(sem_aviso)).height
+
+
+# -- card de progresso do time ------------------------------------------
+
+
+def progresso_jogador(nome: str, estrelas: int, **extras: object) -> dict:
+    base = {
+        "display_name": nome,
+        "discord_user_id": abs(hash(nome)) % 10000,
+        "stars": estrelas,
+        "percent": min(100.0, estrelas / 200 * 100),
+        "reported_at": datetime(2026, 9, 22, tzinfo=UTC),
+        "reached": estrelas >= 200,
+    }
+    base.update(extras)
+    return base
+
+
+def progresso_time(**overrides: object) -> TeamProgress:
+    base: dict[str, object] = {
+        "goal": 200,
+        "players": [
+            progresso_jogador("Um", 203),
+            progresso_jogador("Dois", 142, stars_gained=12, days_measured=7.0),
+        ],
+        "total_stars": 345,
+        "average_stars": 172.5,
+        "players_reached": 1,
+        "team_stars_gained": 12,
+        "window_days": 7,
+        "self_reported": True,
+    }
+    base.update(overrides)
+    return TeamProgress.model_validate(base)
+
+
+async def test_progresso_card_gera_png():
+    dados = await cards.render_progress_card(progresso_time())
+    assert dados is not None
+    assert Image.open(io.BytesIO(dados)).width == cards.LARGURA
+
+
+async def test_progresso_card_sem_jogadores_ainda_renderiza():
+    """Time vazio precisa de card que explique como comecar, nao de nada."""
+    dados = await cards.render_progress_card(
+        progresso_time(players=[], total_stars=0, players_reached=0, team_stars_gained=None)
+    )
+    assert dados is not None
+
+
+async def test_progresso_card_cresce_com_o_time():
+    poucos = await cards.render_progress_card(progresso_time())
+    muitos = await cards.render_progress_card(
+        progresso_time(players=[progresso_jogador(f"J{i}", 100 + i) for i in range(8)])
+    )
+    assert poucos is not None and muitos is not None
+    assert Image.open(io.BytesIO(muitos)).height > Image.open(io.BytesIO(poucos)).height

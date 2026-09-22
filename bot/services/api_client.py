@@ -23,6 +23,8 @@ from bot.services.schemas import (
     MetaResponse,
     MetaUpdate,
     Patch,
+    PlayerProgress,
+    TeamProgress,
 )
 
 logger = get_logger(__name__)
@@ -158,6 +160,41 @@ class MLBBApiClient:
         if payload is None:
             return None
         return Patch.model_validate(payload)
+
+    async def report_stars(
+        self,
+        discord_user_id: int,
+        display_name: str,
+        stars: int,
+        nota: str | None = None,
+    ) -> PlayerProgress:
+        """Registra o reporte de estrelas de um jogador."""
+        if self._client is None:
+            await self.start()
+        assert self._client is not None
+        corpo = {
+            "discord_user_id": discord_user_id,
+            "display_name": display_name,
+            "stars": stars,
+            "note": nota,
+        }
+        try:
+            resposta = await self._client.post("/api/v1/players/stars", json=corpo)
+            resposta.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code >= 500:
+                raise BackendUnavailableError(
+                    f"API retornou {exc.response.status_code}"
+                ) from exc
+            raise BackendError(f"API retornou {exc.response.status_code}") from exc
+        except httpx.HTTPError as exc:
+            raise BackendUnavailableError(str(exc)) from exc
+        return PlayerProgress.model_validate(resposta.json())
+
+    async def get_team_progress(self, meta: int | None = None) -> TeamProgress:
+        params: dict[str, object] = {"goal": meta} if meta else {}
+        payload = await self._get("/api/v1/players/progress", **params)
+        return TeamProgress.model_validate(payload)
 
     async def get_pending_update(self) -> MetaUpdate | None:
         """Atualizacao de meta ainda nao publicada, se houver."""

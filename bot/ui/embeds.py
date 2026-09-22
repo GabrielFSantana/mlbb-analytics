@@ -20,6 +20,8 @@ from bot.services.schemas import (
     MetaResponse,
     MetaUpdate,
     Patch,
+    PlayerProgress,
+    TeamProgress,
 )
 
 LANE_LABELS: dict[str, str] = {
@@ -506,4 +508,82 @@ def build_draft_embed(dados: DraftResponse) -> discord.Embed:
     if dados.is_mock:
         rodape.append("DADOS MOCK")
     embed.set_footer(text=" • ".join(rodape))
+    return embed
+
+
+# ---------------------------------------------------------------------
+# Meta de estrelas do time
+# ---------------------------------------------------------------------
+
+COLOR_META_TIME = discord.Colour.from_rgb(255, 206, 84)
+
+AVISO_AUTO_REPORTADO = (
+    "Numeros informados pelos proprios jogadores — nao sao lidos do jogo."
+)
+
+
+def build_star_report_embed(progresso: PlayerProgress) -> discord.Embed:
+    """Confirmacao de um reporte de estrelas."""
+    embed = discord.Embed(
+        title="⭐ Estrelas registradas",
+        colour=COLOR_META_TIME,
+        description=f"**{progresso.display_name}** — **{progresso.stars}** estrelas",
+    )
+    embed.add_field(name="Progresso", value=f"{progresso.percent:.0f}% da meta", inline=True)
+
+    if progresso.stars_gained is not None and progresso.days_measured:
+        sinal = "+" if progresso.stars_gained >= 0 else ""
+        embed.add_field(
+            name="Ritmo",
+            value=(
+                f"{sinal}{progresso.stars_gained} em {progresso.days_measured:.0f} dia(s)"
+                f"\n{progresso.stars_per_day:+.1f}/dia"
+            ),
+            inline=True,
+        )
+    if progresso.reached:
+        embed.add_field(name="🏆", value="Meta atingida!", inline=True)
+    elif progresso.projected_at:
+        embed.add_field(
+            name="No ritmo atual",
+            value=progresso.projected_at.strftime("%d/%m/%Y"),
+            inline=True,
+        )
+
+    embed.set_footer(text=AVISO_AUTO_REPORTADO)
+    return embed
+
+
+def build_progress_embed(dados: TeamProgress) -> discord.Embed:
+    """Alternativa em texto do card de progresso."""
+    embed = discord.Embed(
+        title=f"🎯 Meta do time: {dados.goal} estrelas",
+        colour=COLOR_META_TIME,
+    )
+
+    if not dados.players:
+        embed.description = (
+            "Ninguem reportou estrelas ainda.\n"
+            "Use `/estrelas <numero>` para registrar as suas."
+        )
+        embed.set_footer(text=AVISO_AUTO_REPORTADO)
+        return embed
+
+    linhas = []
+    for jogador in dados.players:
+        marca = "🏆" if jogador.reached else "•"
+        detalhe = f"{jogador.stars}/{dados.goal} ({jogador.percent:.0f}%)"
+        if jogador.stars_gained is not None:
+            sinal = "+" if jogador.stars_gained >= 0 else ""
+            detalhe += f" · {sinal}{jogador.stars_gained} em {jogador.days_measured:.0f}d"
+        linhas.append(f"{marca} **{jogador.display_name}** — {detalhe}")
+    embed.add_field(name="Jogadores", value="\n".join(linhas), inline=False)
+
+    resumo = [f"Total: **{dados.total_stars}** estrelas", f"Media: {dados.average_stars}"]
+    if dados.team_stars_gained is not None:
+        sinal = "+" if dados.team_stars_gained >= 0 else ""
+        resumo.append(f"{sinal}{dados.team_stars_gained} em {dados.window_days} dias")
+    embed.add_field(name="Time", value=" · ".join(resumo), inline=False)
+
+    embed.set_footer(text=AVISO_AUTO_REPORTADO)
     return embed

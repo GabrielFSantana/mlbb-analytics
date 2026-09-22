@@ -229,6 +229,7 @@ deve ser commitado.
 | `MLBB_API_TIMEOUT` | não | Timeout das chamadas à fonte, em segundos. |
 | `MLBB_API_CACHE_SECONDS` | não | Cache curto, evita repetir chamadas na mesma coleta. |
 | `BUILDS_CACHE_HOURS` | não | Validade das builds gravadas antes de consultar a fonte. Padrão 24. |
+| `TEAM_STAR_GOAL` | não | Meta de estrelas do time. Padrão 200. |
 | `SYNC_ENABLED` | não | Liga a coleta automática. Padrão `true`. |
 | `SYNC_HOURS` | não | Horas UTC da coleta, separadas por vírgula. Padrão `6,18`. |
 | `SYNC_ON_STARTUP` | não | Coleta no boot se ainda não houve coleta hoje. |
@@ -248,6 +249,8 @@ deve ser commitado.
 | GET | `/api/v1/heroes/by-name/{termo}/counters` | Counters e sinergias. |
 | GET | `/api/v1/builds/{termo}` | Builds recomendadas. Aceita `lane` e `rank_filter`. |
 | GET | `/api/v1/draft/suggest` | Sugestões de pick. Aceita `enemy`, `ally`, `lane`, `rank`. |
+| POST | `/api/v1/players/stars` | Registra um reporte de estrelas. |
+| GET | `/api/v1/players/progress` | Progresso do time. Aceita `goal` e `window_days`. |
 | GET | `/api/v1/heroes/{id}/stats` | Histórico de win/pick/ban rate. |
 | GET | `/api/v1/meta` | Tier list de todas as lanes. Aceita `rank`. |
 | GET | `/api/v1/meta/{lane}` | Tier list de uma lane. Aceita `rank`. |
@@ -268,6 +271,8 @@ Toda resposta de meta inclui `is_mock`. **Enquanto for `true`, os números são 
 | `/counter <nome> [formato]` | ✅ — forte contra, fraco contra, combina com, em **imagem** |
 | `/build <herói> [lane] [formato]` | ✅ — itens centrais com ícones, emblema e feitiço, em **imagem** |
 | `/draft inimigos:<...> [aliados] [lane] [ranque]` | ✅ — sugere picks e explica o porquê, em **imagem** |
+| `/estrelas <n> [nota]` | ✅ — registra suas estrelas |
+| `/progresso [meta] [formato]` | ✅ — progresso do time rumo à meta, em **imagem** |
 | `/patch` | ✅ — patch vigente segundo a fonte |
 | `/player`, `/track`, `/compare` | ⏳ Fase 4 |
 
@@ -314,6 +319,28 @@ rate no período.
 > Ao escalar a API para mais de um worker, mova o agendador para um processo próprio —
 > senão cada worker terá o seu. A escrita é idempotente, então o efeito seria
 > desperdício de chamadas à fonte, não dado corrompido.
+
+## Meta de estrelas do time
+
+`/estrelas 142` registra quantas estrelas você tem agora. `/progresso` mostra o time
+inteiro rumo à meta (`TEAM_STAR_GOAL`, padrão 200), com barra por jogador, ritmo da
+semana e projeção.
+
+> **Os números são auto-reportados.** A Moonton não expõe estatísticas de conta sem
+> autenticação do próprio jogador (ver [Player Tracking](#o-que-não-dá-para-fazer)),
+> então não lemos o jogo: guardamos o que cada um informa. O card e os embeds dizem
+> isso explicitamente — apresentar isso como leitura oficial seria mentira.
+
+O valor não está em ler o jogo, e sim em **guardar o histórico**, que ninguém mais
+guarda. Cada reporte vira uma linha; com duas ou mais, o sistema calcula ritmo
+(estrelas por dia na janela recente) e projeta quando a meta cairia.
+
+A projeção tem freios de propósito (`app/domain/progresso.py`): só aparece com ritmo
+positivo, pelo menos 3 dias de histórico e horizonte abaixo de um ano. Extrapolar duas
+leituras coladas produz número sem significado, e número sem significado numa
+interface vira decisão errada.
+
+Ritmo negativo **não** é escondido: perder estrela é informação.
 
 ## Assistente de draft
 
@@ -443,7 +470,8 @@ só entram no Build Simulator com fonte documentada ou cadastro explícito.
 | 3 | Integração de fonte real de estatísticas | ✅ |
 | 3b | Comandos `/hero`, `/counter`, `/patch` | ✅ |
 | 3c | Comando `/build` | ✅ |
-| 4 | Player Tracking, Match History (`/player`, `/track`, `/compare`) | ⏳ |
+| 4 | Player Tracking auto-reportado (`/estrelas`, `/progresso`) | ✅ |
+| 4b | Leitura automática de perfil e partidas | 🚫 bloqueado por acesso |
 | 5 | Build Simulator (`HeroBaseStats`, `Item`, `Emblem`, `BuildCalculator`) | ⏳ |
 | 6 | Dashboard web | ⏳ |
 

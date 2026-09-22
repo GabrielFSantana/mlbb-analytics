@@ -30,6 +30,7 @@ from bot.services.schemas import (
     HeroCounters,
     HeroDetail,
     MetaResponse,
+    TeamProgress,
 )
 from bot.ui.embeds import (
     LANE_LABELS,
@@ -890,6 +891,108 @@ async def render_draft_card(dados: DraftResponse) -> bytes | None:
     return await asyncio.to_thread(_compor_draft, dados, retratos)
 
 
+
+
+# ---------------------------------------------------------------------
+# Card da meta de estrelas do time
+# ---------------------------------------------------------------------
+
+ALTURA_JOGADOR = 58
+LARGURA_BARRA_META = 380
+
+COR_META_ATINGIDA = (255, 206, 84)
+COR_META_PROGRESSO = (118, 200, 128)
+
+
+def _compor_progresso(dados: TeamProgress) -> bytes:
+    fonte_titulo = _carregar_fonte(FONTES_NEGRITO, 30)
+    fonte_sub = _carregar_fonte(FONTES_REGULARES, 14)
+    fonte_nome = _carregar_fonte(FONTES_NEGRITO, 16)
+    fonte_detalhe = _carregar_fonte(FONTES_REGULARES, 12)
+    fonte_estrelas = _carregar_fonte(FONTES_NEGRITO, 20)
+    fonte_rodape = _carregar_fonte(FONTES_REGULARES, 12)
+
+    altura = MARGEM + 108 + max(1, len(dados.players)) * ALTURA_JOGADOR + 24 + 42 + MARGEM
+    imagem = Image.new("RGB", (LARGURA, altura), COR_FUNDO)
+    desenho = ImageDraw.Draw(imagem)
+    desenho.rounded_rectangle(
+        (MARGEM, MARGEM, LARGURA - MARGEM, altura - MARGEM), 14, fill=COR_CARTAO
+    )
+
+    x0 = MARGEM + 26
+    desenho.text(
+        (x0, MARGEM + 22),
+        f"META DO TIME: {dados.goal} ESTRELAS",
+        font=fonte_titulo,
+        fill=COR_TEXTO,
+    )
+
+    resumo = [f"{len(dados.players)} jogador(es)", f"{dados.total_stars} estrelas somadas"]
+    if dados.players_reached:
+        resumo.append(f"{dados.players_reached} ja bateu a meta")
+    if dados.team_stars_gained is not None:
+        sinal = "+" if dados.team_stars_gained >= 0 else ""
+        resumo.append(f"{sinal}{dados.team_stars_gained} em {dados.window_days} dias")
+    desenho.text((x0, MARGEM + 62), " · ".join(resumo), font=fonte_sub, fill=COR_TEXTO_FRACO)
+
+    y = MARGEM + 108
+    if not dados.players:
+        desenho.text(
+            (x0, y + 10),
+            "Ninguem reportou estrelas ainda. Use /estrelas <numero> para comecar.",
+            font=fonte_sub,
+            fill=COR_TEXTO_FRACO,
+        )
+    for jogador in dados.players:
+        cor = COR_META_ATINGIDA if jogador.reached else COR_META_PROGRESSO
+        desenho.text((x0, y), jogador.display_name, font=fonte_nome, fill=COR_TEXTO)
+
+        # Barra de progresso
+        bx = x0 + 210
+        _barra(desenho, bx, y + 6, LARGURA_BARRA_META, jogador.percent / 100, cor, altura=12)
+
+        estrelas = f"{jogador.stars}"
+        desenho.text((bx + LARGURA_BARRA_META + 18, y - 2), estrelas, font=fonte_estrelas, fill=cor)
+        desenho.text(
+            (bx + LARGURA_BARRA_META + 18 + fonte_estrelas.getlength(estrelas) + 6, y + 6),
+            f"/ {dados.goal}",
+            font=fonte_detalhe,
+            fill=COR_TEXTO_FRACO,
+        )
+
+        detalhes = [f"{jogador.percent:.0f}%"]
+        if jogador.stars_gained is not None and jogador.days_measured:
+            sinal = "+" if jogador.stars_gained >= 0 else ""
+            detalhes.append(
+                f"{sinal}{jogador.stars_gained} em {jogador.days_measured:.0f}d"
+            )
+        if jogador.reached:
+            detalhes.append("META ATINGIDA")
+        elif jogador.projected_at:
+            detalhes.append(f"no ritmo: {jogador.projected_at.strftime('%d/%m')}")
+        desenho.text((x0, y + 22), " · ".join(detalhes), font=fonte_detalhe, fill=COR_TEXTO_FRACO)
+
+        y += ALTURA_JOGADOR
+
+    # O aviso nao e rodape decorativo: sem ele o card parece leitura do jogo.
+    desenho.text(
+        (x0, altura - MARGEM - 30),
+        "Numeros informados pelos proprios jogadores — nao sao lidos do jogo. "
+        "Projecoes assumem o ritmo atual e nao sao promessa.",
+        font=fonte_rodape,
+        fill=COR_TEXTO_FRACO,
+    )
+
+    buffer = io.BytesIO()
+    imagem.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+async def render_progress_card(dados: TeamProgress) -> bytes:
+    """Gera o PNG do progresso do time. Sempre renderiza, mesmo vazio."""
+    return await asyncio.to_thread(_compor_progresso, dados)
+
+
 __all__ = [
     "LANE_LABELS",
     "render_build_card",
@@ -897,4 +1000,5 @@ __all__ = [
     "render_draft_card",
     "render_hero_card",
     "render_meta_card",
+    "render_progress_card",
 ]

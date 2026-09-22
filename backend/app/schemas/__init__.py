@@ -11,8 +11,12 @@ from app.schemas.hero import (
     HeroWithStats,
 )
 from app.schemas.meta import MetaAnnouncementAck, MetaEntry, MetaResponse, MetaUpdate
+from app.schemas.player import PlayerProgress, StarReport, TeamProgress
 
 __all__ = [
+    "PlayerProgress",
+    "StarReport",
+    "TeamProgress",
     "DraftCandidate",
     "DraftResponse",
     "BuildItemRead",

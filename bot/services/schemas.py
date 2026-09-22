@@ -154,3 +154,27 @@ class DraftResponse(ApiModel):
     patch: str | None = None
     source: str
     is_mock: bool = False
+
+
+class PlayerProgress(ApiModel):
+    display_name: str
+    discord_user_id: int
+    stars: int
+    percent: float
+    reported_at: datetime
+    stars_gained: int | None = None
+    days_measured: float | None = None
+    stars_per_day: float | None = None
+    projected_at: datetime | None = None
+    reached: bool = False
+
+
+class TeamProgress(ApiModel):
+    goal: int
+    players: list[PlayerProgress] = []
+    total_stars: int = 0
+    average_stars: float = 0.0
+    players_reached: int = 0
+    team_stars_gained: int | None = None
+    window_days: int = 7
+    self_reported: bool = True

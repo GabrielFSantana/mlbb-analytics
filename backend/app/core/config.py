@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     # gravado continua valendo antes de consultar a fonte de novo.
     builds_cache_hours: int = 24
 
+    # --- Meta de estrelas do time -------------------------------------
+    # Alvo padrao do acompanhamento. Pode ser sobrescrito por consulta.
+    team_star_goal: int = 200
+
     # --- Coleta automatica (Fase 2) -----------------------------------
     sync_enabled: bool = True
     # Horas (UTC) em que a coleta roda. A fonte agrega por dia, entao duas

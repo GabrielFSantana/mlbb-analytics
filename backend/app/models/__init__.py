@@ -13,6 +13,7 @@ from app.models.item import Item
 from app.models.meta_announcement import MetaAnnouncement
 from app.models.meta_snapshot import MetaSnapshot
 from app.models.patch import Patch
+from app.models.player import Player, StarSnapshot
 
 __all__ = [
     "TIER_ORDER",
@@ -27,7 +28,9 @@ __all__ = [
     "MetaAnnouncement",
     "MetaSnapshot",
     "Patch",
+    "Player",
     "RankFilter",
     "RelationType",
+    "StarSnapshot",
     "Tier",
 ]
